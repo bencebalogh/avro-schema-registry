@@ -80,6 +80,43 @@ describe('registry', () => {
         });
       });
     });
+
+    it('ask for schema only once if `decodeMessage` called simultaneously', () => {
+      const schema = {type: 'string'};
+      const message = 'test message';
+      const buffer = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x01, 0x18, 0x74, 0x65, 0x73, 0x74, 0x20, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65]);
+      nock('http://test.com')
+        .get('/schemas/ids/1')
+        .reply(200, {schema});
+
+      const uut = registry('https://test.com');
+      return Promise.all([
+        uut.decodeMessage(buffer),
+        uut.decodeMessage(buffer)
+      ]).then(([msg1, msg2]) => {
+        expect(msg1).to.eql(message);
+        expect(msg2).to.eql(message);
+      });
+    });
+
+    it('decodes message by retrieving schema form cache if schema has been retrieved by `encodeMessage`', () => {
+      const schema = {type: 'string'};
+      const message = 'test message';
+      const buffer = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x01, 0x18, 0x74, 0x65, 0x73, 0x74, 0x20, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65]);
+      nock('http://test.com')
+        .post('/subjects/test-value/versions')
+        .reply(200, {id: 1});
+
+      const uut = registry('https://test.com');
+      return uut.encodeMessage('test', schema, message)
+        .then(buff => {
+          expect(buff).to.eql(buffer);
+          return uut.decodeMessage(buff);
+        })
+        .then(msg => {
+          expect(msg).to.eql(message);
+        });
+    });
   });
 
   describe('encodeMessage', () => {
@@ -126,6 +163,25 @@ describe('registry', () => {
           expect(encoded2).to.eql(buffer);
         });
       });
+    });
+
+    it('encodes message by retrieving schema form cache if schema has been retrieved by `decodeMessage`', () => {
+      const schema = {type: 'string'};
+      const message = 'test message';
+      const buffer = Buffer.from([0x00, 0x00, 0x00, 0x00, 0x01, 0x18, 0x74, 0x65, 0x73, 0x74, 0x20, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65]);
+      nock('http://test.com')
+        .get('/schemas/ids/1')
+        .reply(200, {schema});
+
+      const uut = registry('https://test.com');
+      return uut.decodeMessage(buffer)
+        .then(msg => {
+          expect(msg).to.eql(message);
+          return uut.encodeMessage('test', schema, msg);
+        })
+        .then(buff => {
+          expect(buff).to.eql(buffer);
+        });
     });
   });
 });
