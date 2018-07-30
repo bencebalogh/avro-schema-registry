@@ -8,7 +8,12 @@ const avsc = require('avsc');
 
 function fetchSchema(transport, protocol, host, port, schemaId) {
   return new Promise((resolve, reject) => {
-    transport.get(`${protocol}//${host}:${port}/schemas/ids/${schemaId}`, (res) => {
+    const requestOptions = {
+      host,
+      port,
+      path: `/schemas/ids/${schemaId}`
+    };
+    transport.get(requestOptions, (res) => {
       let data = '';
       res.on('data', (d) => {
         data += d;
@@ -31,38 +36,42 @@ function fetchSchema(transport, protocol, host, port, schemaId) {
 
 function pushSchema(transport, protocol, host, port, path, topic, schemaString) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify({schema: schemaString});
-    const req = transport.request({
-      host: `${host}`,
-      port: port,
-      method: 'POST',
-      path: `${path}subjects/${topic}-value/versions`,
-      headers: {
-        'Content-Type': 'application/vnd.schemaregistry.v1+json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    }, (res) => {
-      let data = '';
-      res.on('data', (d) => {
-        data += d;
-      });
-      res.on('error', (e) => {
-        reject(e);
-      });
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          const error = JSON.parse(data);
-          return reject(new Error(`Schema registry error: ${error.error_code} - ${error.message}`));
+      const body = JSON.stringify({schema: schemaString});
+      const reqestOptions = {
+        host: `${host}`,
+        port: port,
+        method: 'POST',
+        path: `${path}subjects/${topic}-value/versions`,
+        headers: {
+          'Content-Type': 'application/vnd.schemaregistry.v1+json',
+          'Content-Length': Buffer.byteLength(body),
         }
+      };
+      const req = transport.request(reqestOptions, (res) => {
+          let data = '';
+          res.on('data', (d) => {
+            data += d;
+          });
+          res.on('error', (e) => {
+            reject(e);
+          });
+          res.on('end', () => {
+            if (res.statusCode !== 200) {
+              const error = JSON.parse(data);
+              return reject(new Error(`Schema registry error: ${error.error_code} - ${error.message}`));
+            }
 
-        const resp = JSON.parse(data);
+            const resp = JSON.parse(data);
 
-        resolve(resp.id);
-      });
-    });
-    req.write(body);
-    req.end();
-  });
+            resolve(resp.id);
+          });
+        }
+      );
+      req.write(body);
+      req.end();
+    }
+  )
+    ;
 }
 
 class SchemaCache {
