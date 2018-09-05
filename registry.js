@@ -2,7 +2,7 @@
 
 const url = require('url');
 const http = require('http');
-const https = require('http');
+const https = require('https');
 
 const avsc = require('avsc');
 
