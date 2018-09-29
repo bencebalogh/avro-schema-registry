@@ -14,7 +14,7 @@ registry.encodeMessage('topic', schema, message)
   .then((msg) => {
     console.log(msg);   // <Buffer 00 00 00 00 01 18 74 65 73 74 20 6d 65 73 73 61 67 65>
 
-    return registry.decodeMessage(msg);
+    return registry.decode(msg);
   })
   .then((msg) => {
     console.log(msg);  // test message
@@ -36,11 +36,22 @@ Both methods return a Promise.
 
 Both methods use an internal cache to store already retrieved schemas and if the same schema id is requested again it won't perform another network call to retrieve the schema.
 
-## decodeMessage
+## decode
 Parameters:
-- msg: message object to decode
+- msg: object to decode
 
 Decodes an avro encoded buffer into a javascript object.
+
+## decodeMessage
+Same as **decode**, only exists for backward compatibility reason.
+
+## encodeKey
+Parameters:
+- topic: the topic to register the schema, if it doesn't exist already in the registry. The schema will be put under the subject `${topic}-key`
+- schema: object representing an avro schema
+- msg: message object to be encoded
+
+Encodes an object into an avro encoded buffer.
 
 ## encodeMessage
 Parameters:
@@ -48,7 +59,7 @@ Parameters:
 - schema: object representing an avro schema
 - msg: message object to be encoded
 
-Decodes a message object into an avro encoded buffer.
+Encodes a message object into an avro encoded buffer.
 
 
 # Peer dependency
