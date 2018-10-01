@@ -34,14 +34,14 @@ function fetchSchema(transport, protocol, host, port, schemaId) {
   });
 }
 
-function pushSchema(transport, protocol, host, port, path, topic, schemaString) {
+function pushSchema(transport, protocol, host, port, path, topic, schemaString, type = 'value') {
   return new Promise((resolve, reject) => {
       const body = JSON.stringify({schema: schemaString});
       const reqestOptions = {
         host: `${host}`,
         port: port,
         method: 'POST',
-        path: `${path}subjects/${topic}-value/versions`,
+        path: `${path}subjects/${topic}-${type}/versions`,
         headers: {
           'Content-Type': 'application/vnd.schemaregistry.v1+json',
           'Content-Length': Buffer.byteLength(body),
@@ -107,14 +107,14 @@ function schemas(registryUrl) {
   };
   const protocol = registry.protocol === 'https:' ? https : http;
 
-  const decodeMessage = (msg) => {
+  const decode = (obj) => {
     let schemaId;
 
     return new Promise((resolve, reject) => {
-      if (msg.readUInt8(0) !== 0) {
+      if (obj.readUInt8(0) !== 0) {
         return reject(new Error(`Message doesn't contain schema identifier byte.`));
       }
-      schemaId = msg.readUInt32BE(1);
+      schemaId = obj.readUInt32BE(1);
       let promise = schemas.getById(schemaId);
 
       if (promise) {
@@ -129,35 +129,44 @@ function schemas(registryUrl) {
       return resolve(promise);
     })
       .then((schema) => {
-        return avsc.parse(schema).fromBuffer(msg.slice(5));
+        return avsc.parse(schema).fromBuffer(obj.slice(5));
       });
   };
 
-  const encodeMessage = (topic, schema, msg) => (() => new Promise((resolve, reject) => {
+  const encodeFunction = (type) => (topic, schema, msg) => (() => new Promise((resolve, reject) => {
     const schemaString = JSON.stringify(schema);
     let id = schemas.getBySchema(schema);
     if (id) {
       return resolve(id)
     }
 
-    const promise = pushSchema(protocol, registry.protocol, registry.host, registry.port, parsed.path, topic, schemaString);
+    const promise = pushSchema(protocol, registry.protocol, registry.host, registry.port, parsed.path, topic, schemaString, type);
     promise.then(id => {
       schemas.set(id, schema);
       return schema;
     }).catch(reject);
+    
     return resolve(promise);
   }))()
-    .then((schemaId) => {
-      const encodedMessage = avsc.parse(schema).toBuffer(msg);
+  .then((schemaId) => {
+    const encodedMessage = avsc.parse(schema).toBuffer(msg);
 
-      const message = Buffer.alloc(encodedMessage.length + 5);
-      message.writeUInt8(0);
-      message.writeUInt32BE(schemaId, 1);
-      encodedMessage.copy(message, 5);
-      return message;
-    });
+    const message = Buffer.alloc(encodedMessage.length + 5);
+    message.writeUInt8(0);
+    message.writeUInt32BE(schemaId, 1);
+    encodedMessage.copy(message, 5);
+    return message;
+  });
 
-  return {encodeMessage, decodeMessage};
+  const encodeKey = encodeFunction('key');
+  const encodeMessage = encodeFunction('value');
+
+  return {
+    encodeKey,
+    encodeMessage,
+    decode,
+    decodeMessage: decode,
+  };
 };
 
 module.exports = schemas;
