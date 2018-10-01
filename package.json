@@ -1,6 +1,6 @@
 {
   "name": "avro-schema-registry",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Confluent Schema Registry implementation in javascript to easily serialize and deserialize kafka messages",
   "main": "registry.js",
   "scripts": {
