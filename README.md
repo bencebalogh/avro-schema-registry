@@ -19,6 +19,14 @@ registry.encodeMessage('topic', schema, message)
   .then((msg) => {
     console.log(msg);  // test message
   });
+
+registry.encodeById(1, message)
+  .then((msg) => {
+    console.log(msg);   // <Buffer 00 00 00 00 01 18 74 65 73 74 20 6d 65 73 73 61 67 65>
+
+    return registry.decode(msg);
+  })
+
 ```
 
 # Install
@@ -32,9 +40,9 @@ npm install avro-schema-registry
 
 The module exports one function only, which expects a `url` parameter, which is a Confluent Schema Registry endpoint. The function returns an object with two methods.
 
-Both methods return a Promise.
+Every method returns a Promise.
 
-Both methods use an internal cache to store already retrieved schemas and if the same schema id is requested again it won't perform another network call to retrieve the schema.
+Every method uses an internal cache to store already retrieved schemas and if the same id or schema is used again it won't perform another network call.
 
 ## decode
 Parameters:
@@ -61,6 +69,12 @@ Parameters:
 
 Encodes a message object into an avro encoded buffer.
 
+## encodeById
+Parameters:
+- id: schema id in the registry
+- msg: message object to be encoded
+
+Encodes a message object into an avro encoded buffer by fetching the schema from the registry.
 
 # Peer dependency
 

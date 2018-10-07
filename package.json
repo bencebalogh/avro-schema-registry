@@ -4,7 +4,7 @@
   "description": "Confluent Schema Registry implementation in javascript to easily serialize and deserialize kafka messages",
   "main": "registry.js",
   "scripts": {
-    "test": "node node_modules/.bin/mocha ./test"
+    "test": "node node_modules/.bin/mocha ./test --recursive"
   },
   "keywords": [
     "kafka",
