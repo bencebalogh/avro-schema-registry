@@ -3,7 +3,6 @@
 const url = require('url');
 const http = require('http');
 const https = require('https');
-const avsc = require('avsc');
 
 const SchemaCache = require('./lib/schema-cache');
 const decodeFunction = require('./lib/decode-function');
@@ -13,11 +12,15 @@ function schemas(registryUrl) {
   const parsed = url.parse(registryUrl);
   const registry = {
     cache: new SchemaCache(),
-    protocol: parsed.protocol === 'https' ? https : http,
+    protocol: parsed.protocol.startsWith('https') ? https : http,
     host: parsed.hostname,
     port: parsed.port,
     path: parsed.path,
   };
+
+  if(parsed.auth) {
+    registry.auth = parsed.auth;
+  }
 
   const decode = decodeFunction(registry)
   const encodeKey = encodeFunction.bySchema('key', registry);
