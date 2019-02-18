@@ -7,7 +7,7 @@ Confluent Schema Registry implementation to easily serialize and deserialize kaf
 ```
 const registry = require('avro-schema-registry')('https://host.com:8081');
 
-const schema = {type: 'string'};
+const schema = {type: 'string'}; // schema can also have multiple fields, see Schema Object
 const message = 'test message';
 
 registry.encodeMessage('topic', schema, message)
@@ -69,6 +69,23 @@ Parameters:
 
 Encodes a message object into an avro encoded buffer.
 
+### Schema Object
+
+Schema can be a single key:value pair like so
+```
+const schema = {type: 'string'};
+```
+and can also have multiple properties according to https://docs.confluent.io/current/schema-registry/docs/
+
+```
+const schm = {
+  type: 'record',
+  name: 'test',
+  fields: [
+    {name: 'name', type: 'string'},
+  ]
+};
+```
 ## encodeById
 Parameters:
 - id: schema id in the registry
