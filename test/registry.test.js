@@ -10,6 +10,10 @@ chai.use(chaiAsPromised);
 const registry = require('./../registry');
 
 describe('registry', () => {
+  afterEach(() => {
+    nock.cleanAll();
+  });
+
   describe('export', () => {
     it('returns an object with encode and decode methods', () => {
       const uut = registry('http://test.com');
@@ -26,6 +30,29 @@ describe('registry', () => {
       expect(uut.decodeMessage).to.be.instanceOf(Function);
       expect(uut.decode).to.equal(uut.decodeMessage);
     });
+
+    it('selects https transport', () => {
+      const uut = registry('https://test.com');
+
+      const schema = {type: 'string'};
+      nock('https://test.com')
+        .post('/subjects/test-value/versions')
+        .reply(200, {id: 1});
+
+      return uut.encodeMessage('test', schema, 'some string');
+    })
+
+    it('respects basic auth credentials', () => {
+      const uut = registry('https://username:password@test.com');
+
+      const schema = {type: 'string'};
+      nock('https://test.com')
+        .post('/subjects/test-value/versions')
+        .basicAuth({ user: 'username', pass: 'password' })
+        .reply(200, {id: 1});
+
+      return uut.encodeMessage('test', schema, 'some string');
+    })
   });
 
 });

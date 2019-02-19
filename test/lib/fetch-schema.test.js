@@ -22,7 +22,7 @@ describe('fetchSchema', () => {
       .get('/schemas/ids/1')
       .reply(500, {error_code: 40403, message: 'Schema not found'});
 
-    const uut = fetchSchema(http, registry.host, registry.port, 1);
+    const uut = fetchSchema(registry, 1);
     return uut.catch((error) => {
       expect(error).to.exist
         .and.be.instanceof(Error)
@@ -36,7 +36,7 @@ describe('fetchSchema', () => {
       .get('/schemas/ids/1')
       .reply(200, {schema});
 
-    const uut = fetchSchema(http, registry.host, registry.port, 1);
+    const uut = fetchSchema(registry, 1);
     return uut.then((schema) => {
       expect(schema).to.eql(schema);
     });

@@ -24,7 +24,7 @@ describe('pushSchema', () => {
       .post('/subjects/test-value/versions')
       .reply(500, {error_code: 42201, message: 'Invalid Avro schema'});
 
-    const uut = pushSchema(http, registry.host, registry.port, registry.path, 'test', schema);
+    const uut = pushSchema(registry, 'test', schema);
     return uut.catch((error) => {
       expect(error).to.exist
         .and.be.instanceof(Error)
@@ -38,7 +38,7 @@ describe('pushSchema', () => {
       .post('/subjects/test-value/versions')
       .reply(200, {id: 1});
 
-    const uut = pushSchema(http, registry.host, registry.port, registry.path, 'test', schema);
+    const uut = pushSchema(registry, 'test', schema);
     return uut.then((id) => {
       expect(id).to.eql(1);
     });
@@ -50,7 +50,7 @@ describe('pushSchema', () => {
       .post('/subjects/test-key/versions')
       .reply(200, {id: 1});
 
-    const uut = pushSchema(http, registry.host, registry.port, registry.path, 'test', schema, 'key');
+    const uut = pushSchema(registry, 'test', schema, 'key');
     return uut.then((id) => {
       expect(id).to.eql(1);
     });
@@ -62,7 +62,7 @@ describe('pushSchema', () => {
       .post('/subjects/test-value/versions')
       .reply(200, {id: 1});
 
-    const uut = pushSchema(http, registry.host, registry.port, registry.path, 'test', schema, 'value');
+    const uut = pushSchema(registry, 'test', schema, 'value');
     return uut.then((id) => {
       expect(id).to.eql(1);
     });
