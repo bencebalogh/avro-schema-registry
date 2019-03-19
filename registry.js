@@ -9,6 +9,7 @@ const SchemaCache = require('./lib/schema-cache');
 const decodeFunction = require('./lib/decode-function');
 const encodeFunction = require('./lib/encode-function');
 
+
 function schemas(registryUrl) {
   const parsed = url.parse(registryUrl);
   const registry = {
@@ -20,6 +21,7 @@ function schemas(registryUrl) {
   };
 
   const decode = decodeFunction(registry)
+  const getSchemabyMessage = decodeFunction(registry, true)
   const encodeKey = encodeFunction.bySchema('key', registry);
   const encodeMessage = encodeFunction.bySchema('value', registry);
   const encodeById = encodeFunction.byId(registry);
@@ -30,6 +32,7 @@ function schemas(registryUrl) {
     encodeById,
     encodeKey,
     encodeMessage,
+    getSchemabyMessage
   };
 };
 
