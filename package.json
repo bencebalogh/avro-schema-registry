@@ -21,10 +21,13 @@
     "url": "git://github.com/bencebalogh/avro-schema-registry.git"
   },
   "devDependencies": {
-    "chai": "^4.1.2",
+    "chai": "^4.2.0",
     "chai-as-promised": "^7.1.1",
-    "mocha": "^5.0.3",
-    "nock": "^9.2.3",
-    "sinon": "^4.4.2"
+    "mocha": "^6.0.2",
+    "nock": "^10.0.6",
+    "sinon": "^7.3.0"
+  },
+  "dependencies": {
+    "avsc": "^5.4.7"
   }
 }
