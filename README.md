@@ -42,11 +42,12 @@ The module exports one function only, which expects a `url` parameter, which is 
 
 Every method returns a Promise.
 
-Every method uses an internal cache to store already retrieved schemas and if the same id or schema is used again it won't perform another network call.
+Every method uses an internal cache to store already retrieved schemas and if the same id or schema is used again it won't perform another network call. Schemas are cached with their parsing options.
 
 ## decode
 Parameters:
 - msg: object to decode
+- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
 
 Decodes an avro encoded buffer into a javascript object.
 
@@ -58,6 +59,7 @@ Parameters:
 - topic: the topic to register the schema, if it doesn't exist already in the registry. The schema will be put under the subject `${topic}-key`
 - schema: object representing an avro schema
 - msg: message object to be encoded
+- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
 
 Encodes an object into an avro encoded buffer.
 
@@ -66,6 +68,7 @@ Parameters:
 - topic: the topic to register the schema, if it doesn't exist already in the registry. The schema will be put under the subject `${topic}-value`
 - schema: object representing an avro schema
 - msg: message object to be encoded
+- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
 
 Encodes a message object into an avro encoded buffer.
 
@@ -73,6 +76,7 @@ Encodes a message object into an avro encoded buffer.
 Parameters:
 - id: schema id in the registry
 - msg: message object to be encoded
+- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
 
 Encodes a message object into an avro encoded buffer by fetching the schema from the registry.
 
