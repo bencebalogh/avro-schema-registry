@@ -15,6 +15,7 @@ describe('fetchSchema', () => {
     protocol: http,
     host: 'test.com',
     port: null,
+    path: '/',
   };
 
   it('should reject a promise if the request fails', () => {
