@@ -41,6 +41,7 @@ describe('fetchSchema', () => {
     return uut.then((schema) => {
       expect(schema).to.eql(schema);
     });
+  }).on('error', (e) => {
+    reject(e);
   });
 });
-  

@@ -53,6 +53,15 @@ describe('registry', () => {
 
       return uut.encodeMessage('test', schema, 'some string');
     })
+
+    it('handles connection error', () => {
+      const uut = registry('https://not-good-url');
+
+      const schema = {type: 'string'};
+
+      const result = uut.encodeMessage('test', schema, 'some string');
+      expect(result).to.eventually.be.rejectedWith('getaddrinfo ENOTFOUND not-good-url not-good-url:443');
+    })
   });
 
 });
