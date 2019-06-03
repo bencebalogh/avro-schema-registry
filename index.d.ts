@@ -6,7 +6,7 @@ type EncodeMessage = (
   parseOptions?: any,
 ) => Promise<any>;
 
-interface ISchemaRegistry {
+export interface ISchemaRegistry {
   decode: DecodeMessage;
   decodeMessage: DecodeMessage;
   encodeById: (schemaId: string, msg: any, parseOptions?: any) => Promise<any>;
@@ -14,6 +14,6 @@ interface ISchemaRegistry {
   encodeMessage: EncodeMessage;
 }
 
-declare function schema(registryUrl: string): ISchemaRegistry;
+export declare function schema(registryUrl: string): ISchemaRegistry;
 
-export = schema;
+schema;
