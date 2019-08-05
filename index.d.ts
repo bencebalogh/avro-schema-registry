@@ -1,19 +1,16 @@
-type DecodeMessage = (obj: Buffer, parseOptions?: any) => Promise<any>;
-type EncodeMessage = (
-  topic: string,
-  schema: any,
-  msg: any,
-  parseOptions?: any,
-) => Promise<any>;
+declare namespace schema {
+    export type DecodeMessage = <T>(obj: Buffer, parseOptions?: any) => Promise<T>;
+    export type EncodeById = (schemaId: number, msg: any, parseOptions?: any) => Promise<Buffer>;
+    export type EncodeBySchema = (topic: string, schema: any, msg: any, parseOptions?: any) => Promise<Buffer>;
 
-export interface ISchemaRegistry {
-  decode: DecodeMessage;
-  decodeMessage: DecodeMessage;
-  encodeById: (schemaId: string, msg: any, parseOptions?: any) => Promise<any>;
-  encodeKey: EncodeMessage;
-  encodeMessage: EncodeMessage;
+    export interface ISchemaRegistry {
+        decode: DecodeMessage;
+        decodeMessage: DecodeMessage;
+        encodeById: EncodeById;
+        encodeKey: EncodeBySchema;
+        encodeMessage: EncodeBySchema;
+    }
 }
 
-export declare function schema(registryUrl: string): ISchemaRegistry;
-
-schema;
+export = schema;
+declare function schema(registryUrl: string) : schema.ISchemaRegistry;
