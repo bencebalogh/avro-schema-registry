@@ -9,7 +9,6 @@ declare namespace schema {
         decode: DecodeMessage;
         decodeMessage: DecodeMessage;
         encodeById: EncodeById;
-        encodeByName: EncodeById;
         encodeKey: EncodeBySchema;
         encodeMessage: EncodeBySchema;
         encodeMessageByTopicName: EncodeByTopicName
