@@ -22,10 +22,12 @@ function schemas(registryUrl) {
     registry.auth = parsed.auth;
   }
 
-  const decode = decodeFunction(registry)
+  const decode = decodeFunction(registry);
   const encodeKey = encodeFunction.bySchema('key', registry);
   const encodeMessage = encodeFunction.bySchema('value', registry);
   const encodeById = encodeFunction.byId(registry);
+  const encodeMessageByTopicName = encodeFunction.byTopicName(registry);
+  const getSchemaByTopicName = encodeFunction.getSchemaByTopicName(registry);
 
   return {
     decode,
@@ -33,7 +35,9 @@ function schemas(registryUrl) {
     encodeById,
     encodeKey,
     encodeMessage,
+    encodeMessageByTopicName,
+    getSchemaByTopicName,
   };
-};
+}
 
 module.exports = schemas;
