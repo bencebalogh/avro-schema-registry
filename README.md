@@ -80,6 +80,27 @@ Parameters:
 
 Encodes a message object into an avro encoded buffer by fetching the schema from the registry.
 
+## encodeMessageByTopicName
+
+Try to get already existing schema from the schema registry and encode message with obtained schema. Please note, that the latest schema will be obtained.
+
+This may be useful when topic consumer is on duty of providing the schema for the topic's messages.
+
+Parameters:
+
+- topic: topic name to fetch schema for
+- msg: message object to be encoded
+- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
+
+## getSchemaByTopicName
+
+This method tries to get already existing schema from the schema registry. Please note, that the latest schema will be obtained.
+
+Parameters:
+
+- topic: topic name to fetch schema for
+- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
+
 # Peer dependency
 
 The module has no dependency, only one peer dependency: [avsc](https://github.com/mtth/avsc)
