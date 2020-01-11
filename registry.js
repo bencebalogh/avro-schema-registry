@@ -8,18 +8,21 @@ const SchemaCache = require('./lib/schema-cache');
 const decodeFunction = require('./lib/decode-function');
 const encodeFunction = require('./lib/encode-function');
 
-function schemas(registryUrl) {
-  const parsed = url.parse(registryUrl);
+function schemas(registryUrl, auth = null) {
+  const parsed = new URL(registryUrl);
   const registry = {
     cache: new SchemaCache(),
     protocol: parsed.protocol.startsWith('https') ? https : http,
     host: parsed.hostname,
     port: parsed.port,
-    path: parsed.path,
+    path: parsed.path != null ? parsed.path : '/',
+    username: parsed.username,
+    password: parsed.password,
   };
 
-  if(parsed.auth) {
-    registry.auth = parsed.auth;
+  if(auth != null && (typeof auth === 'object')) {
+    registry.username = auth.username;
+    registry.password = auth.password;
   }
 
   const decode = decodeFunction(registry);
