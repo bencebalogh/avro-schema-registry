@@ -10,6 +10,7 @@ chai.use(chaiAsPromised);
 
 const SchemaCache = require('./../../lib/schema-cache');
 const encodeFunction = require('./../../lib/encode-function');
+const { Strategy } = require('./../../lib/strategy');
 
 describe('encodeFunction', () => {
   let registry;
@@ -80,7 +81,7 @@ describe('encodeFunction', () => {
         .post('/subjects/test-key/versions')
         .reply(200, {id: 1});
 
-      const uut = encodeFunction.bySchema('key', registry);
+      const uut = encodeFunction.bySchema(Strategy.TopicNameStrategy, true, registry);
       return uut('test', schema, message).then((encoded) => {
         expect(encoded).to.eql(buffer);
       });
@@ -94,7 +95,7 @@ describe('encodeFunction', () => {
         .post('/subjects/test-value/versions')
         .reply(200, {id: 1});
 
-      const uut = encodeFunction.bySchema('value', registry);
+      const uut = encodeFunction.bySchema(Strategy.TopicNameStrategy, false, registry);
       return uut('test', schema, message).then((encoded) => {
         expect(encoded).to.eql(buffer);
       });
@@ -105,7 +106,7 @@ describe('encodeFunction', () => {
         .post('/subjects/test-key/versions')
         .reply(500, {error_code: 42201, message: 'Invalid Avro schema'});
 
-      const uut = encodeFunction.bySchema('key', registry);
+      const uut = encodeFunction.bySchema(Strategy.TopicNameStrategy, true, registry);
       return uut('test', {type: 'string'}, 'test message').catch((error) => {
         expect(error).to.exist
           .and.be.instanceof(Error)
@@ -121,7 +122,7 @@ describe('encodeFunction', () => {
         .post('/subjects/test-key/versions')
         .reply(200, {id: 1});
 
-      const uut = encodeFunction.bySchema('key', registry);
+      const uut = encodeFunction.bySchema(Strategy.TopicNameStrategy, true, registry);
       return uut('test', schema, message).then((encoded) => {
         expect(encoded).to.eql(buffer);
       });
@@ -135,7 +136,7 @@ describe('encodeFunction', () => {
         .post('/subjects/test-key/versions')
         .reply(200, {id: 1});
 
-      const uut = encodeFunction.bySchema('key', registry);
+      const uut = encodeFunction.bySchema(Strategy.TopicNameStrategy, true, registry);
       return uut('test', schema, message).then((encoded1) => {
         expect(encoded1).to.eql(buffer);
         return uut('test', schema, message).then((encoded2) => {
