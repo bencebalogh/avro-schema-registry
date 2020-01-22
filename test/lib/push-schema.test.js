@@ -9,6 +9,8 @@ const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
 
 const pushSchema = require('./../../lib/push-schema');
+const { Strategy } = require('./../../lib/strategy');
+const avsc = require('avsc');
 
 describe('pushSchema', () => {
   const registry = {
@@ -20,11 +22,12 @@ describe('pushSchema', () => {
 
   it('should reject a promise if push fails', () => {
     const schema = {type: 'string'};
+    const parsedSchema = avsc.parse(schema);
     nock('http://test.com')
       .post('/subjects/test-value/versions')
       .reply(500, {error_code: 42201, message: 'Invalid Avro schema'});
 
-    const uut = pushSchema(registry, 'test', schema);
+    const uut = pushSchema(Strategy.TopicNameStrategy, registry, 'test', parsedSchema, false);
     return uut.catch((error) => {
       expect(error).to.exist
         .and.be.instanceof(Error)
@@ -34,11 +37,12 @@ describe('pushSchema', () => {
 
   it('should resolve a promise with the schema id if the post works', () => {
     const schema = {type: 'string'};
+    const parsedSchema = avsc.parse(schema);
     nock('http://test.com')
       .post('/subjects/test-value/versions')
       .reply(200, {id: 1});
 
-    const uut = pushSchema(registry, 'test', schema);
+    const uut = pushSchema(Strategy.TopicNameStrategy, registry, 'test', parsedSchema, false);
     return uut.then((id) => {
       expect(id).to.eql(1);
     });
@@ -46,11 +50,12 @@ describe('pushSchema', () => {
 
   it ('should call the correct path for key type', () => {
     const schema = {type: 'string'};
+    const parsedSchema = avsc.parse(schema);
     nock('http://test.com')
       .post('/subjects/test-key/versions')
       .reply(200, {id: 1});
 
-    const uut = pushSchema(registry, 'test', schema, 'key');
+    const uut = pushSchema(Strategy.TopicNameStrategy, registry, 'test', parsedSchema, true);
     return uut.then((id) => {
       expect(id).to.eql(1);
     });
@@ -58,11 +63,12 @@ describe('pushSchema', () => {
 
   it ('should call the correct path for value type', () => {
     const schema = {type: 'string'};
+    const parsedSchema = avsc.parse(schema);
     nock('http://test.com')
       .post('/subjects/test-value/versions')
       .reply(200, {id: 1});
 
-    const uut = pushSchema(registry, 'test', schema, 'value');
+    const uut = pushSchema(Strategy.TopicNameStrategy, registry, 'test', parsedSchema, false);
     return uut.then((id) => {
       expect(id).to.eql(1);
     });
