@@ -40,9 +40,9 @@ describe('registry', () => {
         .reply(200, {id: 1});
 
       return uut.encodeMessage('test', schema, 'some string');
-    })
+    });
 
-    it('respects basic auth credentials', () => {
+    it('respects basic auth credentials from the url', () => {
       const uut = registry('https://username:password@test.com');
 
       const schema = {type: 'string'};
@@ -52,7 +52,19 @@ describe('registry', () => {
         .reply(200, {id: 1});
 
       return uut.encodeMessage('test', schema, 'some string');
-    })
+    });
+
+    it('respects basic auth credentials from the auth object', () => {
+      const uut = registry('https://@test.com', {username: 'username', password: 'password'});
+
+      const schema = {type: 'string'};
+      nock('https://test.com')
+        .post('/subjects/test-value/versions')
+        .basicAuth({ user: 'username', pass: 'password' })
+        .reply(200, {id: 1});
+
+      return uut.encodeMessage('test', schema, 'some string');
+    });
 
     it('handles connection error', () => {
       const uut = registry('https://not-good-url');
@@ -60,8 +72,8 @@ describe('registry', () => {
       const schema = {type: 'string'};
 
       const result = uut.encodeMessage('test', schema, 'some string');
-      expect(result).to.eventually.be.rejectedWith('getaddrinfo ENOTFOUND not-good-url not-good-url:443');
-    })
+      expect(result).to.eventually.be.rejectedWith('getaddrinfo ENOTFOUND not-good-url');
+    });
   });
 
 });

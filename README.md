@@ -38,11 +38,24 @@ npm install avro-schema-registry
 
 # Doc
 
-The module exports one function only, which expects a `url` parameter, which is a Confluent Schema Registry endpoint. The function returns an object with two methods.
+The module exports one function only, which expects a `url` parameter, which is a Confluent Schema Registry endpoint and an optional auth object. The function returns an object .
 
 Every method returns a Promise.
-
 Every method uses an internal cache to store already retrieved schemas and if the same id or schema is used again it won't perform another network call. Schemas are cached with their parsing options.
+
+## Authentication with the Schema Registry
+
+You can set username and password in the url object:
+```
+require('avro-schema-registry')('https://username:password@host.com:8081');
+```
+
+You can pass in an optional second parameter for the registry, with the username and password:
+```
+require('avro-schema-registry')('https://host.com:8081', {username: 'username', password: 'password'});
+```
+
+If both the url contains the authencation information and there's an authentication object parameter then the object takes precedence.
 
 ## decode
 Parameters:

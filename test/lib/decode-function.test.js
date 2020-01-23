@@ -26,7 +26,7 @@ describe('decodeFunction', () => {
 
   it('rejects with an error if there is no schema identifier in the message', () => {
     const uut = decodeFunction(registry);
-    return uut(new Buffer('test')).catch((error) => {
+    return uut(Buffer.from('test')).catch((error) => {
       expect(error).to.exist
         .and.be.instanceof(Error)
         .and.have.property('message', `Message doesn't contain schema identifier byte.`);
