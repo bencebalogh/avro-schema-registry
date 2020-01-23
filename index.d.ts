@@ -17,4 +17,4 @@ declare namespace schema {
 }
 
 export = schema;
-declare function schema(registryUrl: string) : schema.ISchemaRegistry;
+declare function schema(registryUrl: string, auth?: any) : schema.ISchemaRegistry;
