@@ -37,7 +37,9 @@ jobs:
       - name: Git push
         run: git push --follow-tags
       - name: Publish package
-        run: yarn package_publish
+        run: |
+          npm config set @lookio:registry https://npm.pkg.github.com/
+          yarn package_publish
         env:
           CI: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
