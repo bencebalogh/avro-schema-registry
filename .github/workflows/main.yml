@@ -22,10 +22,19 @@ jobs:
         with:
           node-version: "12.x"
           registry-url: "https://npm.pkg.github.com"
-      - run: npm install --global yarn
-      - run: yarn install --production --frozen-lockfile
-      - run: git config user.email "team-america-lp@liveperson.com"
-      - run: git config user.name "CI User"
-      - run: yarn version --patch --message "Bump version to %s"
-      - run: git push --follow-tags
-      - run: yarn package_publish
+      - name: Authenticate with GitHub package registry
+        run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+      - name: Intall yarn
+        run: npm install --global yarn
+      - name: Install dependencies via Yarn
+        run: yarn install --production --frozen-lockfile
+      - name: setup Git config
+      - run: |
+          git config user.email "team-america-lp@liveperson.com"
+          git config user.name "CI User"
+      - name: Version Bump
+        run: yarn version --patch --message "Bump version to %s"
+      - name: Git push
+        run: git push --follow-tags
+      - name: Publish package
+        run: yarn package_publish
