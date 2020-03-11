@@ -1,10 +1,11 @@
 {
-  "name": "avro-schema-registry",
-  "version": "2.0.1",
+  "name": "@lookio/avro-schema-registry",
+  "version": "0.0.1",
   "description": "Confluent Schema Registry implementation in javascript to easily serialize and deserialize kafka messages",
   "main": "registry.js",
   "scripts": {
-    "test": "node node_modules/.bin/mocha ./test --recursive"
+    "test": "node node_modules/.bin/mocha ./test --recursive",
+    "package_publish": "npm publish --registry https://npm.pkg.github.com/"
   },
   "keywords": [
     "kafka",
@@ -16,9 +17,12 @@
   "peerDependencies": {
     "avsc": "^5.2.1"
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/@lookio"
+  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/bencebalogh/avro-schema-registry.git"
+    "url": "https://github.com/lookio/avro-schema-registry.git"
   },
   "devDependencies": {
     "chai": "^4.1.2",
