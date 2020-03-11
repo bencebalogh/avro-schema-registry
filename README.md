@@ -85,6 +85,15 @@ Parameters:
 
 Encodes a message object into an avro encoded buffer.
 
+## encode
+Parameters:
+- topic: the topic to register the schema, if it doesn't exist already in the registry. The schema will be put under the subject `${topic}-${schema.namespace}.${schema.name}`
+- schema: object representing an avro schema
+- msg: message object to be encoded
+- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
+
+Encodes a message object into an avro encoded buffer.
+
 ## encodeById
 Parameters:
 - id: schema id in the registry
