@@ -6,11 +6,12 @@ declare namespace schema {
     export type GetSchemaByTopicName = (topic: string, parseOptions?: any) => Promise<{id: number, parsedSchema: any}>;
 
     export interface ISchemaRegistry {
-        decode: DecodeMessage;
+	    decode: DecodeMessage;
         decodeMessage: DecodeMessage;
         encodeById: EncodeById;
         encodeKey: EncodeBySchema;
-        encodeMessage: EncodeBySchema;
+	    encodeMessage: EncodeBySchema;
+	    encode: EncodeBySchema;
         encodeMessageByTopicName: EncodeByTopicName
         getSchemaByTopicName: GetSchemaByTopicName
     }
