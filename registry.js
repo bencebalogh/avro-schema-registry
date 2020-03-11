@@ -28,6 +28,7 @@ function schemas(registryUrl, auth = null) {
   const decode = decodeFunction(registry);
   const encodeKey = encodeFunction.bySchema('key', registry);
   const encodeMessage = encodeFunction.bySchema('value', registry);
+  const encode = encodeFunction.bySchema('multi', registry);
   const encodeById = encodeFunction.byId(registry);
   const encodeMessageByTopicName = encodeFunction.byTopicName(registry);
   const getSchemaByTopicName = encodeFunction.getSchemaByTopicName(registry);
@@ -38,6 +39,7 @@ function schemas(registryUrl, auth = null) {
     encodeById,
     encodeKey,
     encodeMessage,
+    encode,
     encodeMessageByTopicName,
     getSchemaByTopicName,
   };
