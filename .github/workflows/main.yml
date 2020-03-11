@@ -1,0 +1,31 @@
+name: Node CI
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  IMAGE_NAME: maven-uid-api
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "12.x"
+          registry-url: "https://npm.pkg.github.com"
+      - run: npm install --global yarn
+      - run: yarn install --production --frozen-lockfile
+      - run: git config user.email "team-america-lp@liveperson.com"
+      - run: git config user.name "CI User"
+      - run: yarn version --patch --message "Bump version to %s"
+      - run: git push --follow-tags
+      - run: yarn package_publish
