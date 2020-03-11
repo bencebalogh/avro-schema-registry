@@ -29,7 +29,7 @@ jobs:
       - name: Install dependencies via Yarn
         run: yarn install --production --frozen-lockfile
       - name: setup Git config
-      - run: |
+        run: |
           git config user.email "team-america-lp@liveperson.com"
           git config user.name "CI User"
       - name: Version Bump
