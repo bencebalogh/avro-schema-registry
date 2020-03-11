@@ -5,16 +5,10 @@ on:
     branches:
       - master
 
-env:
-  IMAGE_NAME: maven-uid-api
-
 jobs:
   build:
 
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: true
 
     steps:
       - uses: actions/checkout@v2
@@ -24,21 +18,15 @@ jobs:
           registry-url: "https://npm.pkg.github.com"
       - name: Authenticate with GitHub package registry
         run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
-      - name: Intall yarn
-        run: npm install --global yarn
-      - name: Install dependencies via Yarn
-        run: yarn install --production --frozen-lockfile
-      - name: setup Git config
-        run: |
-          git config user.email "team-america-lp@liveperson.com"
-          git config user.name "CI User"
-      - name: Version Bump
-        run: yarn version --patch --message "Bump version to %s"
-      - name: Git push
-        run: git push --follow-tags
-      - name: Publish package
+      - name: Build and publish
         run: |
           npm config set @lookio:registry https://npm.pkg.github.com/
+          npm install --global yarn
+          yarn install --frozen-lockfile
+          git config user.email "team-america-lp@liveperson.com"
+          git config user.name "CI User"
+          yarn version --patch --message "Bump version to %s"
+          git push --follow-tags
           yarn package_publish
         env:
           CI: true
