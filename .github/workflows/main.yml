@@ -38,3 +38,6 @@ jobs:
         run: git push --follow-tags
       - name: Publish package
         run: yarn package_publish
+        env:
+          CI: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
