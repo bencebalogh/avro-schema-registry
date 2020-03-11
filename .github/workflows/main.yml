@@ -27,7 +27,7 @@ jobs:
           git config user.name "CI User"
           yarn version --patch --message "Bump version to %s"
           git push --follow-tags
-          yarn package_publish
+          npm publish
         env:
           CI: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
