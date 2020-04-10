@@ -28,7 +28,8 @@ describe('pushSchema', () => {
     return uut.catch((error) => {
       expect(error).to.exist
         .and.be.instanceof(Error)
-        .and.have.property('message', 'Schema registry error: 42201 - Invalid Avro schema');
+        .and.have.property('message');
+      expect(error.message).contains('Invalid Avro schema');
     });
   });
 
@@ -69,4 +70,3 @@ describe('pushSchema', () => {
   });
 
 });
-  

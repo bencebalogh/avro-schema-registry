@@ -13,7 +13,7 @@ const encodeFunction = require('./../../lib/encode-function');
 
 describe('encodeFunction', () => {
   let registry;
-  
+
   beforeEach(() => {
     registry = {
       cache: new SchemaCache(),
@@ -99,7 +99,7 @@ describe('encodeFunction', () => {
         expect(encoded).to.eql(buffer);
       });
     });
-    
+
     it('rejects with an error if schema registry call returns with an error', () => {
       nock('http://test.com')
         .post('/subjects/test-key/versions')
@@ -109,7 +109,8 @@ describe('encodeFunction', () => {
       return uut('test', {type: 'string'}, 'test message').catch((error) => {
         expect(error).to.exist
           .and.be.instanceof(Error)
-          .and.have.property('message', 'Schema registry error: 42201 - Invalid Avro schema');
+          .and.have.property('message');
+        expect(error.message).contains('Invalid Avro schema');
       });
     });
 
