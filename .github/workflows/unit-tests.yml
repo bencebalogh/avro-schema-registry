@@ -1,7 +1,7 @@
-name: Node CI
+name: Unit Tests
 
 on:
-  push:
+  pull_request:
     branches:
       - master
 
@@ -23,11 +23,6 @@ jobs:
           npm install --global yarn
           yarn install --frozen-lockfile
           yarn test
-          git config user.email "team-america-lp@liveperson.com"
-          git config user.name "CI User"
-          yarn version --patch --message "Bump version to %s"
-          git push --follow-tags
-          npm publish
         env:
           CI: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
