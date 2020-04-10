@@ -1,6 +1,6 @@
 {
   "name": "@lookio/avro-schema-registry",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Confluent Schema Registry implementation in javascript to easily serialize and deserialize kafka messages",
   "main": "registry.js",
   "scripts": {
