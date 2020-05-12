@@ -45,8 +45,10 @@ function schemas(registryUrl, auth = null) {
     }
 
     return schemaId.then((id) => {
-      registry.cache.setById(id, Promise.resolve(parsedSchema));
-      registry.cache.setBySchema(schema, Promise.resolve(id));
+      if (schemaId != Promise.resolve(parsedSchema)) {
+        registry.cache.setById(id, Promise.resolve(parsedSchema));
+        registry.cache.setBySchema(schema, Promise.resolve(id));
+      }
 
       return id;
     });
@@ -61,8 +63,10 @@ const getSchema = (id, parseOptions) => {
 
     return schemaPromise.then((schema) => {
       const parsedSchema = avsc.parse(schema, parseOptions);
-      registry.cache.setById(id, Promise.resolve(parsedSchema));
-      registry.cache.setBySchema(schema, Promise.resolve(id));
+      if (schemaPromise != Promise.resolve(parsedSchema)) {
+        registry.cache.setById(id, Promise.resolve(parsedSchema));
+        registry.cache.setBySchema(schema, Promise.resolve(id));
+      }
 
       return parsedSchema;
     });
@@ -77,9 +81,11 @@ const getSchema = (id, parseOptions) => {
 
     return promise.then(({schema, id}) => {
       const parsedSchema = avsc.parse(schema, parseOptions);
-      registry.cache.setByName(topic, Promise.resolve({schema, id}));
-      registry.cache.setById(id, Promise.resolve(parsedSchema));
-      registry.cache.setBySchema(schema, Promise.resolve(id));
+      if (promise != Promise.resolve({schema, id})) {
+        registry.cache.setByName(topic, Promise.resolve({schema, id}));
+        registry.cache.setById(id, Promise.resolve(parsedSchema));
+        registry.cache.setBySchema(schema, Promise.resolve(id));
+      }
       return {parsedSchema, id};
     });
   };
@@ -101,8 +107,10 @@ const getSchema = (id, parseOptions) => {
 
     return schemaPromise.then((schema) => {
       const parsedSchema = avsc.parse(schema, parseOptions);
-      registry.cache.setById(id, Promise.resolve(parsedSchema));
-      registry.cache.setBySchema(JSON.stringify(schema), Promise.resolve(id));
+      if (schemaPromise != Promise.resolve(parsedSchema)) {
+        registry.cache.setById(id, Promise.resolve(parsedSchema));
+        registry.cache.setBySchema(JSON.stringify(schema), Promise.resolve(id));
+      }
 
       return parsedSchema.fromBuffer(buffer);
     });
