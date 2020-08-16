@@ -97,8 +97,6 @@ const getSchema = (id, parseOptions) => {
     const id = msg.readUInt32BE(1);
     const buffer = msg.slice(5);
 
-    const schema = registry.cache.getById(id);
-
     let schemaPromise = registry.cache.getById(id);
     if (!schemaPromise) {
       schemaPromise = getSchemaById(registry, id);
