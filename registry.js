@@ -16,7 +16,7 @@ function schemas(registryUrl, auth = null) {
     protocol: parsed.protocol.startsWith('https') ? https : http,
     host: parsed.hostname,
     port: parsed.port,
-    path: parsed.path != null ? parsed.path : '/',
+    path: parsed.pathname != null ? parsed.pathname : '/',
     username: parsed.username,
     password: parsed.password,
   };

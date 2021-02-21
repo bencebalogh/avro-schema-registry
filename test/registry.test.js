@@ -70,6 +70,17 @@ describe('registry', () => {
       return uut.encodeMessage('test', schema, 'some string');
     });
 
+    it('correctly handles URLs with paths', () => {
+      const uut = registry('https://test.com/schemaregistry/');
+
+      const schema = {type: 'string'};
+      nock('https://test.com')
+        .post('/schemaregistry/subjects/test-value/versions')
+        .reply(200, {id: 1});
+
+      return uut.encodeMessage('test', schema, 'some string');
+    });
+
     it('handles connection error', () => {
       const uut = registry('https://not-good-url');
 
