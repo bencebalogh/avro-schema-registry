@@ -104,13 +104,16 @@ const getSchema = (id, parseOptions) => {
     }
 
     return schemaPromise.then((schema) => {
-      const parsedSchema = avsc.parse(schema, parseOptions);
-      if (schemaPromise != Promise.resolve(parsedSchema)) {
+      // if schema returned from a cached parsedSchema already don't parse it again
+      // if it's not cached parse and cache the parsed schema
+      if (!(schema instanceof avsc.Type)) {
+        const parsedSchema = avsc.parse(schema, parseOptions);
         registry.cache.setById(id, Promise.resolve(parsedSchema));
         registry.cache.setBySchema(JSON.stringify(schema), Promise.resolve(id));
+        return parsedSchema.fromBuffer(buffer);
       }
 
-      return parsedSchema.fromBuffer(buffer);
+      return schema.fromBuffer(buffer);
     });
   };
 
