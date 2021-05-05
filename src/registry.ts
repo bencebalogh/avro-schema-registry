@@ -8,24 +8,142 @@ import * as avsc from "avsc"
 import { SchemaCache } from "./schema-cache"
 import { pushSchema, getSchemaById, getLatestVersionForSubject } from "./http-calls"
 
-export function schemas(registryUrl, auth = null) {
-  const parsed = new URL(registryUrl)
-  const registry = {
-    cache: new SchemaCache(),
-    protocol: parsed.protocol.startsWith("https") ? https : http,
-    host: parsed.hostname,
-    port: parsed.port,
-    path: parsed.pathname != null ? parsed.pathname : "/",
-    username: parsed.username,
-    password: parsed.password,
+export class Schemas {
+  registry: {
+    cache: SchemaCache
+    protocol: typeof https | typeof http
+    host: string
+    port: string
+    path: string
+    username: string
+    password: string
+  }
+  constructor(registryUrl, auth = null) {
+    const parsed = new URL(registryUrl)
+    this.registry = {
+      cache: new SchemaCache(),
+      protocol: parsed.protocol.startsWith("https") ? https : http,
+      host: parsed.hostname,
+      port: parsed.port,
+      path: parsed.pathname != null ? parsed.pathname : "/",
+      username: parsed.username,
+      password: parsed.password,
+    }
+
+    if (auth != null && typeof auth === "object") {
+      this.registry.username = auth.username
+      this.registry.password = auth.password
+    }
   }
 
-  if (auth != null && typeof auth === "object") {
-    registry.username = auth.username
-    registry.password = auth.password
+  async getId(subject, schema, parsedSchema): Promise<string> {
+    let schemaId = this.registry.cache.getBySchema(schema)
+    if (!schemaId) {
+      schemaId = await pushSchema(this.registry, subject, schema)
+      this.registry.cache.setBySchema(schema, schemaId)
+    }
+
+    this.registry.cache.setById(schemaId, Promise.resolve(parsedSchema))
+    this.registry.cache.setBySchema(schema, Promise.resolve(schemaId))
+
+    return schemaId
   }
 
-  const encodeFunction = (msg, schemaId, schema) => {
+  async getSchema(id, parseOptions) {
+    let schemaPromise = this.registry.cache.getById(id)
+    if (!schemaPromise) {
+      schemaPromise = getSchemaById(this.registry, id)
+      this.registry.cache.setById(schemaPromise, undefined)
+    }
+
+    return schemaPromise.then((schema) => {
+      const parsedSchema = avsc.parse(schema, parseOptions)
+      if (schemaPromise != Promise.resolve(parsedSchema)) {
+        this.registry.cache.setById(id, Promise.resolve(parsedSchema))
+        this.registry.cache.setBySchema(schema, Promise.resolve(id))
+      }
+
+      return parsedSchema
+    })
+  }
+
+  async getSchemaAndId(topic, parseOptions) {
+    let promise = this.registry.cache.getByName(topic)
+    if (!promise) {
+      promise = getLatestVersionForSubject(this.registry, topic)
+      this.registry.cache.setByName(topic, promise)
+    }
+
+    return promise.then(({ schema, id }) => {
+      const parsedSchema = avsc.parse(schema, parseOptions)
+      if (promise != Promise.resolve({ schema, id })) {
+        this.registry.cache.setByName(topic, Promise.resolve({ schema, id }))
+        this.registry.cache.setById(id, Promise.resolve(parsedSchema))
+        this.registry.cache.setBySchema(schema, Promise.resolve(id))
+      }
+      return { parsedSchema, id }
+    })
+  }
+
+  async decodeMessage(msg, parseOptions) {
+    if (msg.readUInt8(0) !== 0) {
+      return Promise.reject(new Error(`Message doesn't contain schema identifier byte.`))
+    }
+    const id = msg.readUInt32BE(1)
+    const buffer = msg.slice(5)
+
+    let schemaPromise = this.registry.cache.getById(id)
+
+    if (!schemaPromise) {
+      schemaPromise = getSchemaById(this.registry, id)
+      this.registry.cache.setById(schemaPromise, undefined)
+    }
+
+    return schemaPromise.then((schema) => {
+      // if schema returned from a cached parsedSchema already don't parse it again
+      // if it's not cached parse and cache the parsed schema
+      if (!(schema instanceof avsc.Type)) {
+        const parsedSchema = avsc.parse(schema, parseOptions)
+        this.registry.cache.setById(id, Promise.resolve(parsedSchema))
+        this.registry.cache.setBySchema(JSON.stringify(schema), Promise.resolve(id))
+        return parsedSchema.fromBuffer(buffer)
+      }
+
+      return schema.fromBuffer(buffer)
+    })
+  }
+
+  async encodeKey(topic, schema, msg, parseOptions = null) {
+    try {
+      const parsedSchema = avsc.parse(schema, parseOptions)
+      const id = await this.getId(`${topic}-key`, schema, parsedSchema)
+      return this.encodeFunction(msg, id, parsedSchema)
+    } catch (e) {
+      return Promise.reject(e)
+    }
+  }
+
+  async encodeMessage(topic, schema, msg, parseOptions = null): Promise<unknown> {
+    const parsedSchema = avsc.parse(schema, parseOptions)
+    const id = await this.getId(`${topic}-value`, schema, parsedSchema)
+    return this.encodeFunction(msg, id, parsedSchema)
+  }
+
+  async encodeById(id, msg, parseOptions = null) {
+    const schema = await this.getSchema(id, parseOptions)
+    return this.encodeFunction(msg, id, schema)
+  }
+
+  async encodeMessageByTopicName(topic, msg, parseOptions = null) {
+    const { parsedSchema, id } = await this.getSchemaAndId(topic, parseOptions)
+    return this.encodeFunction(msg, id, parsedSchema)
+  }
+
+  async getSchemaByTopicName(topic, parseOptions = null) {
+    return this.getSchemaAndId(topic, parseOptions)
+  }
+
+  encodeFunction(msg, schemaId, schema) {
     const encodedMessage = schema.toBuffer(msg)
 
     const message = Buffer.alloc(encodedMessage.length + 5)
@@ -34,125 +152,5 @@ export function schemas(registryUrl, auth = null) {
     encodedMessage.copy(message, 5)
 
     return message
-  }
-
-  const getId = (subject, schema, parsedSchema) => {
-    let schemaId = registry.cache.getBySchema(schema)
-    if (!schemaId) {
-      schemaId = pushSchema(registry, subject, schema)
-      registry.cache.setBySchema(schema, schemaId)
-    }
-
-    return schemaId.then((id) => {
-      if (schemaId != Promise.resolve(parsedSchema)) {
-        registry.cache.setById(id, Promise.resolve(parsedSchema))
-        registry.cache.setBySchema(schema, Promise.resolve(id))
-      }
-
-      return id
-    })
-  }
-
-  const getSchema = (id, parseOptions) => {
-    let schemaPromise = registry.cache.getById(id)
-    if (!schemaPromise) {
-      schemaPromise = getSchemaById(registry, id)
-      registry.cache.setById(schemaPromise, undefined)
-    }
-
-    return schemaPromise.then((schema) => {
-      const parsedSchema = avsc.parse(schema, parseOptions)
-      if (schemaPromise != Promise.resolve(parsedSchema)) {
-        registry.cache.setById(id, Promise.resolve(parsedSchema))
-        registry.cache.setBySchema(schema, Promise.resolve(id))
-      }
-
-      return parsedSchema
-    })
-  }
-
-  const getSchemaAndId = (topic, parseOptions) => {
-    let promise = registry.cache.getByName(topic)
-    if (!promise) {
-      promise = getLatestVersionForSubject(registry, topic)
-      registry.cache.setByName(topic, promise)
-    }
-
-    return promise.then(({ schema, id }) => {
-      const parsedSchema = avsc.parse(schema, parseOptions)
-      if (promise != Promise.resolve({ schema, id })) {
-        registry.cache.setByName(topic, Promise.resolve({ schema, id }))
-        registry.cache.setById(id, Promise.resolve(parsedSchema))
-        registry.cache.setBySchema(schema, Promise.resolve(id))
-      }
-      return { parsedSchema, id }
-    })
-  }
-
-  const decode = (msg, parseOptions) => {
-    if (msg.readUInt8(0) !== 0) {
-      return Promise.reject(new Error(`Message doesn't contain schema identifier byte.`))
-    }
-    const id = msg.readUInt32BE(1)
-    const buffer = msg.slice(5)
-
-    let schemaPromise = registry.cache.getById(id)
-    if (!schemaPromise) {
-      schemaPromise = getSchemaById(registry, id)
-      registry.cache.setById(schemaPromise, undefined)
-    }
-
-    return schemaPromise.then((schema) => {
-      // if schema returned from a cached parsedSchema already don't parse it again
-      // if it's not cached parse and cache the parsed schema
-      if (!(schema instanceof avsc.Type)) {
-        const parsedSchema = avsc.parse(schema, parseOptions)
-        registry.cache.setById(id, Promise.resolve(parsedSchema))
-        registry.cache.setBySchema(JSON.stringify(schema), Promise.resolve(id))
-        return parsedSchema.fromBuffer(buffer)
-      }
-
-      return schema.fromBuffer(buffer)
-    })
-  }
-
-  const encodeKey = (topic, schema, msg, parseOptions = null) => {
-    try {
-      const parsedSchema = avsc.parse(schema, parseOptions)
-      return getId(`${topic}-key`, schema, parsedSchema).then((id) => encodeFunction(msg, id, parsedSchema))
-    } catch (e) {
-      return Promise.reject(e)
-    }
-  }
-
-  const encodeMessage = (topic, schema, msg, parseOptions = null) => {
-    try {
-      const parsedSchema = avsc.parse(schema, parseOptions)
-      return getId(`${topic}-value`, schema, parsedSchema).then((id) => encodeFunction(msg, id, parsedSchema))
-    } catch (e) {
-      return Promise.reject(e)
-    }
-  }
-
-  const encodeById = (id, msg, parseOptions = null) => {
-    return getSchema(id, parseOptions).then((schema) => encodeFunction(msg, id, schema))
-  }
-
-  const encodeMessageByTopicName = (topic, msg, parseOptions = null) => {
-    return getSchemaAndId(topic, parseOptions).then(({ parsedSchema, id }) => encodeFunction(msg, id, parsedSchema))
-  }
-
-  const getSchemaByTopicName = (topic, parseOptions = null) => {
-    return getSchemaAndId(topic, parseOptions)
-  }
-
-  return {
-    decode,
-    decodeMessage: decode,
-    encodeById,
-    encodeKey,
-    encodeMessage,
-    encodeMessageByTopicName,
-    getSchemaByTopicName,
   }
 }
