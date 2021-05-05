@@ -5,15 +5,11 @@ import { SchemaApiClientConfiguration, SchemaApiClient } from "./schema-api-clie
 
 describe("http-calls", () => {
   const schema = { type: "string" }
-  const registry: SchemaApiClientConfiguration = {
-    protocol: http,
-    host: "test.com",
-    username: null,
-    password: null,
-    path: "/",
+  const apiClientOptions: SchemaApiClientConfiguration = {
+    baseUrl: "http://test.com/",
   }
 
-  const schemaApi = new SchemaApiClient(registry)
+  const schemaApi = new SchemaApiClient(apiClientOptions)
 
   afterEach(() => {
     nock.cleanAll()

@@ -1,69 +1,40 @@
-import { URL } from "url"
-import * as http from "http"
-import * as https from "https"
-
-//@ts-ignore
 import * as avsc from "avsc"
 
 import { SchemaCache } from "./schema-cache"
 import { SchemaApiClient } from "./schema-api-client"
 
 export class Schemas {
-  registry: {
-    cache: SchemaCache
-    protocol: typeof https | typeof http
-    host: string
-    port: string
-    path: string
-    username: string
-    password: string
-  }
-  api: SchemaApiClient
-  constructor(registryUrl, auth = null) {
-    const parsed = new URL(registryUrl)
-    this.registry = {
-      cache: new SchemaCache(),
-      protocol: parsed.protocol.startsWith("https") ? https : http,
-      host: parsed.hostname,
-      port: parsed.port,
-      path: parsed.pathname != null ? parsed.pathname : "/",
-      username: parsed.username,
-      password: parsed.password,
-    }
+  private cache: SchemaCache
 
-    if (auth != null && typeof auth === "object") {
-      this.registry.username = auth.username
-      this.registry.password = auth.password
-    }
-
-    this.api = new SchemaApiClient(this.registry)
+  constructor(private readonly api: SchemaApiClient) {
+    this.cache = new SchemaCache()
   }
 
   async getId(subject, schema, parsedSchema): Promise<string> {
-    let schemaId = this.registry.cache.getBySchema(schema)
+    let schemaId = this.cache.getBySchema(schema)
     if (!schemaId) {
       schemaId = await this.api.pushSchema(subject, schema)
-      this.registry.cache.setBySchema(schema, schemaId)
+      this.cache.setBySchema(schema, schemaId)
     }
 
-    this.registry.cache.setById(schemaId, Promise.resolve(parsedSchema))
-    this.registry.cache.setBySchema(schema, Promise.resolve(schemaId))
+    this.cache.setById(schemaId, Promise.resolve(parsedSchema))
+    this.cache.setBySchema(schema, Promise.resolve(schemaId))
 
     return schemaId
   }
 
   async getSchema(id, parseOptions) {
-    let schemaPromise = this.registry.cache.getById(id)
+    let schemaPromise = this.cache.getById(id)
     if (!schemaPromise) {
       schemaPromise = this.api.getSchemaById(id)
-      this.registry.cache.setById(schemaPromise, undefined)
+      this.cache.setById(schemaPromise, undefined)
     }
 
     return schemaPromise.then((schema) => {
       const parsedSchema = avsc.parse(schema, parseOptions)
       if (schemaPromise != Promise.resolve(parsedSchema)) {
-        this.registry.cache.setById(id, Promise.resolve(parsedSchema))
-        this.registry.cache.setBySchema(schema, Promise.resolve(id))
+        this.cache.setById(id, Promise.resolve(parsedSchema))
+        this.cache.setBySchema(schema, Promise.resolve(id))
       }
 
       return parsedSchema
@@ -71,18 +42,18 @@ export class Schemas {
   }
 
   async getSchemaAndId(topic, parseOptions) {
-    let promise = this.registry.cache.getByName(topic)
+    let promise = this.cache.getByName(topic)
     if (!promise) {
       promise = this.api.getLatestVersionForSubject(topic)
-      this.registry.cache.setByName(topic, promise)
+      this.cache.setByName(topic, promise)
     }
 
     return promise.then(({ schema, id }) => {
       const parsedSchema = avsc.parse(schema, parseOptions)
       if (promise != Promise.resolve({ schema, id })) {
-        this.registry.cache.setByName(topic, Promise.resolve({ schema, id }))
-        this.registry.cache.setById(id, Promise.resolve(parsedSchema))
-        this.registry.cache.setBySchema(schema, Promise.resolve(id))
+        this.cache.setByName(topic, Promise.resolve({ schema, id }))
+        this.cache.setById(id, Promise.resolve(parsedSchema))
+        this.cache.setBySchema(schema, Promise.resolve(id))
       }
       return { parsedSchema, id }
     })
@@ -95,11 +66,11 @@ export class Schemas {
     const id = msg.readUInt32BE(1)
     const buffer = msg.slice(5)
 
-    let schemaPromise = this.registry.cache.getById(id)
+    let schemaPromise = this.cache.getById(id)
 
     if (!schemaPromise) {
       schemaPromise = this.api.getSchemaById(id)
-      this.registry.cache.setById(schemaPromise, undefined)
+      this.cache.setById(schemaPromise, undefined)
     }
 
     return schemaPromise.then((schema) => {
@@ -107,8 +78,8 @@ export class Schemas {
       // if it's not cached parse and cache the parsed schema
       if (!(schema instanceof avsc.Type)) {
         const parsedSchema = avsc.parse(schema, parseOptions)
-        this.registry.cache.setById(id, Promise.resolve(parsedSchema))
-        this.registry.cache.setBySchema(JSON.stringify(schema), Promise.resolve(id))
+        this.cache.setById(id, Promise.resolve(parsedSchema))
+        this.cache.setBySchema(JSON.stringify(schema), Promise.resolve(id))
         return parsedSchema.fromBuffer(buffer)
       }
 

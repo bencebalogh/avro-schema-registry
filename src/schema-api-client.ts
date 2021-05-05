@@ -1,92 +1,94 @@
 import * as httpsRequest from "https"
 import * as httpRequest from "http"
+import { URL } from "url"
 
 export interface SchemaApiClientConfiguration {
-  protocol: typeof httpRequest | typeof httpsRequest
-  host: string
-  port?: string
+  baseUrl: string
   username?: string
   password?: string
-  path: string
+  agent?: httpRequest.Agent | httpsRequest.Agent
 }
 
 type RequestOptions = httpsRequest.RequestOptions | httpRequest.RequestOptions
 
 export class SchemaApiClient {
-  constructor(private readonly registry: SchemaApiClientConfiguration) {}
+  baseRequestOptions: RequestOptions
+  requester: typeof httpRequest | typeof httpsRequest
+  basePath: string
 
-  async getSchemaById(schemaId) {
-    const { protocol, host, port, username, password, path } = this.registry
-    const requestOptions: RequestOptions = {
-      host,
-      port,
+  constructor(private readonly options: SchemaApiClientConfiguration) {
+    const parsed = new URL(options.baseUrl)
+
+    this.requester = parsed.protocol.startsWith("https") ? httpsRequest : httpRequest
+    this.basePath = parsed.pathname != null ? parsed.pathname : "/"
+
+    const username = options.username ?? parsed.username
+    const password = options.password ?? parsed.password
+
+    this.baseRequestOptions = {
+      host: parsed.hostname,
+      port: parsed.port,
       headers: {
         "Content-Type": "application/vnd.schemaregistry.v1+json",
       },
-      path: `${path}schemas/ids/${schemaId}`,
+      agent: options.agent,
       auth: username && password ? `${username}:${password}` : null,
     }
+  }
 
-    const data = await this.request(protocol, requestOptions)
+  async getSchemaById(schemaId) {
+    const requestOptions: RequestOptions = {
+      ...this.baseRequestOptions,
+      path: `${this.basePath}schemas/ids/${schemaId}`,
+    }
+
+    const data = await this.request(requestOptions)
 
     return JSON.parse(data).schema
   }
 
   async pushSchema(subject, schema) {
-    const { protocol, host, port, username, password, path } = this.registry
     const body = JSON.stringify({ schema: JSON.stringify(schema) })
     const requestOptions: RequestOptions = {
+      ...this.baseRequestOptions,
       method: "POST",
-      host,
-      port,
-      headers: {
-        "Content-Type": "application/vnd.schemaregistry.v1+json",
-        "Content-Length": Buffer.byteLength(body),
-      },
-      path: `${path}subjects/${subject}/versions`,
-      auth: username && password ? `${username}:${password}` : null,
+      path: `${this.basePath}subjects/${subject}/versions`,
     }
 
-    const data = await this.request(protocol, requestOptions, body)
+    const data = await this.request(requestOptions, body)
 
     return JSON.parse(data).id
   }
 
   async getLatestVersionForSubject(subject) {
-    const { protocol, host, port, username, password, path } = this.registry
     const requestOptions: RequestOptions = {
-      host,
-      port,
-      headers: {
-        "Content-Type": "application/vnd.schemaregistry.v1+json",
-      },
-      path: `${path}subjects/${subject}/versions`,
-      auth: username && password ? `${username}:${password}` : null,
+      ...this.baseRequestOptions,
+      path: `${this.basePath}subjects/${subject}/versions`,
     }
 
-    const data = await this.request(protocol, requestOptions)
+    const data = await this.request(requestOptions)
 
     const versions = JSON.parse(data)
 
     const requestOptions2: RequestOptions = {
       ...requestOptions,
-      path: `${path}subjects/${subject}/versions/${versions.pop()}`,
+      path: `${this.basePath}subjects/${subject}/versions/${versions.pop()}`,
     }
 
-    const data2 = await this.request(protocol, requestOptions2)
+    const data2 = await this.request(requestOptions2)
 
     const responseBody2 = JSON.parse(data2)
 
     return { schema: responseBody2.schema, id: responseBody2.id }
   }
 
-  private request(
-    protocol: SchemaApiClientConfiguration["protocol"],
-    requestOptions: RequestOptions,
-    requestBody?: string
-  ) {
+  private request(requestOptions: RequestOptions, requestBody?: string) {
+    if (requestBody && requestBody.length > 0) {
+      requestOptions.headers = { ...requestOptions.headers, "Content-Length": Buffer.byteLength(requestBody) }
+    }
+
     return new Promise<string>((resolve, reject) => {
-      const req = protocol
+      const req = this.requester
         .request(requestOptions, (res) => {
           let data = ""
           res.on("data", (d) => {
