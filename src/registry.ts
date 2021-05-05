@@ -6,7 +6,7 @@ import * as https from "https"
 import * as avsc from "avsc"
 
 import { SchemaCache } from "./schema-cache"
-import { pushSchema, getSchemaById, getLatestVersionForSubject } from "./http-calls"
+import { SchemaApiClient } from "./schema-api-client"
 
 export class Schemas {
   registry: {
@@ -18,6 +18,7 @@ export class Schemas {
     username: string
     password: string
   }
+  api: SchemaApiClient
   constructor(registryUrl, auth = null) {
     const parsed = new URL(registryUrl)
     this.registry = {
@@ -34,12 +35,14 @@ export class Schemas {
       this.registry.username = auth.username
       this.registry.password = auth.password
     }
+
+    this.api = new SchemaApiClient(this.registry)
   }
 
   async getId(subject, schema, parsedSchema): Promise<string> {
     let schemaId = this.registry.cache.getBySchema(schema)
     if (!schemaId) {
-      schemaId = await pushSchema(this.registry, subject, schema)
+      schemaId = await this.api.pushSchema(subject, schema)
       this.registry.cache.setBySchema(schema, schemaId)
     }
 
@@ -52,7 +55,7 @@ export class Schemas {
   async getSchema(id, parseOptions) {
     let schemaPromise = this.registry.cache.getById(id)
     if (!schemaPromise) {
-      schemaPromise = getSchemaById(this.registry, id)
+      schemaPromise = this.api.getSchemaById(id)
       this.registry.cache.setById(schemaPromise, undefined)
     }
 
@@ -70,7 +73,7 @@ export class Schemas {
   async getSchemaAndId(topic, parseOptions) {
     let promise = this.registry.cache.getByName(topic)
     if (!promise) {
-      promise = getLatestVersionForSubject(this.registry, topic)
+      promise = this.api.getLatestVersionForSubject(topic)
       this.registry.cache.setByName(topic, promise)
     }
 
@@ -95,7 +98,7 @@ export class Schemas {
     let schemaPromise = this.registry.cache.getById(id)
 
     if (!schemaPromise) {
-      schemaPromise = getSchemaById(this.registry, id)
+      schemaPromise = this.api.getSchemaById(id)
       this.registry.cache.setById(schemaPromise, undefined)
     }
 

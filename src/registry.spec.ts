@@ -105,14 +105,17 @@ describe("registry", () => {
     })
 
     it("rejects if the registry call fails", () => {
-      nock("http://test.com").get("/schemas/ids/1").reply(500, { error_code: 40403, message: "Schema not found" })
+      const mockError = { error_code: 40403, message: "Schema not found" }
+      nock("http://test.com").get("/schemas/ids/1").reply(500, mockError)
 
       const uut = new Schemas("http://test.com")
 
       return uut.decodeMessage(buffer, undefined).catch((error) => {
         expect(error).toBeInstanceOf(Error)
 
-        expect(error).toEqual(expect.objectContaining({ message: "Schema registry error: 40403 - Schema not found" }))
+        expect(error).toEqual(
+          expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+        )
       })
     })
 
@@ -142,16 +145,17 @@ describe("registry", () => {
     })
 
     it("rejects if the schema registry call fails", () => {
-      nock("http://test.com")
-        .post("/subjects/topic-key/versions")
-        .reply(500, { error_code: 1, message: "failed request" })
+      const mockError = { error_code: 1, message: "failed request" }
+      nock("http://test.com").post("/subjects/topic-key/versions").reply(500, mockError)
 
       const uut = new Schemas("http://test.com")
 
       return uut.encodeKey("topic", schema, message).catch((error) => {
         expect(error).toBeInstanceOf(Error)
 
-        expect(error).toEqual(expect.objectContaining({ message: "Schema registry error: 1 - failed request" }))
+        expect(error).toEqual(
+          expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+        )
       })
     })
 
@@ -181,16 +185,17 @@ describe("registry", () => {
     })
 
     it("rejects if the schema registry call fails", () => {
-      nock("http://test.com")
-        .post("/subjects/topic-value/versions")
-        .reply(500, { error_code: 1, message: "failed request" })
+      const mockError = { error_code: 1, message: "failed request" }
+      nock("http://test.com").post("/subjects/topic-value/versions").reply(500, mockError)
 
       const uut = new Schemas("http://test.com")
 
       return uut.encodeMessage("topic", schema, message).catch((error) => {
         expect(error).toBeInstanceOf(Error)
 
-        expect(error).toEqual(expect.objectContaining({ message: "Schema registry error: 1 - failed request" }))
+        expect(error).toEqual(
+          expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+        )
       })
     })
 
@@ -212,14 +217,17 @@ describe("registry", () => {
 
   describe("encodeById", () => {
     it("rejects if the schema registry call fails", () => {
-      nock("http://test.com").get("/schemas/ids/1").reply(500, { error_code: 1, message: "failed request" })
+      const mockError = { error_code: 1, message: "failed request" }
+      nock("http://test.com").get("/schemas/ids/1").reply(500, mockError)
 
       const uut = new Schemas("http://test.com")
 
       return uut.encodeById(1, message).catch((error) => {
         expect(error).toBeInstanceOf(Error)
 
-        expect(error).toEqual(expect.objectContaining({ message: "Schema registry error: 1 - failed request" }))
+        expect(error).toEqual(
+          expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+        )
       })
     })
 
@@ -241,14 +249,17 @@ describe("registry", () => {
 
   describe("encodeMessageByTopicName", () => {
     it("rejects if the schema registry call fails", () => {
-      nock("http://test.com").get("/subjects/topic/versions").reply(500, { error_code: 1, message: "failed request" })
+      const mockError = { error_code: 1, message: "failed request" }
+      nock("http://test.com").get("/subjects/topic/versions").reply(500, mockError)
 
       const uut = new Schemas("http://test.com")
 
       return uut.encodeMessageByTopicName("topic", message).catch((error) => {
         expect(error).toBeInstanceOf(Error)
 
-        expect(error).toEqual(expect.objectContaining({ message: "Schema registry error: 1 - failed request" }))
+        expect(error).toEqual(
+          expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+        )
       })
     })
 
@@ -271,14 +282,17 @@ describe("registry", () => {
 
   describe("getSchemaByTopicName", () => {
     it("rejects if the schema registry call fails", () => {
-      nock("http://test.com").get("/subjects/topic/versions").reply(500, { error_code: 1, message: "failed request" })
+      const mockError = { error_code: 1, message: "failed request" }
+      nock("http://test.com").get("/subjects/topic/versions").reply(500, mockError)
 
       const uut = new Schemas("http://test.com")
 
       return uut.getSchemaByTopicName("topic").catch((error) => {
         expect(error).toBeInstanceOf(Error)
 
-        expect(error).toEqual(expect.objectContaining({ message: "Schema registry error: 1 - failed request" }))
+        expect(error).toEqual(
+          expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+        )
       })
     })
 
