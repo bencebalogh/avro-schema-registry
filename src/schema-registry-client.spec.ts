@@ -1,10 +1,6 @@
-import { readFileSync } from "fs"
-import * as http from "http"
-import { Agent } from "https"
 import * as nock from "nock"
-import { version } from "typescript"
 
-import { SchemaApiClientConfiguration, SchemaRegistryClient } from "./schema-registry-client"
+import { SchemaApiClientConfiguration, SchemaRegistryClient, SchemaRegistryError } from "./schema-registry-client"
 
 describe("SchemaRegistryClient (Integration Tests)", () => {
   const schema = { type: "string" }
@@ -25,7 +21,7 @@ describe("SchemaRegistryClient (Integration Tests)", () => {
       nock("http://test.com").post("/subjects/topic/versions").replyWithError(requestError)
 
       const result = schemaApi.registerSchema("topic", schemaPayload)
-      expect(result).rejects.toEqual(requestError)
+      await expect(result).rejects.toEqual(requestError)
     })
 
     it("reject if post request returns with not 200", async () => {
@@ -33,8 +29,9 @@ describe("SchemaRegistryClient (Integration Tests)", () => {
       nock("http://test.com").post("/subjects/topic/versions").reply(500, mockError)
 
       const result = schemaApi.registerSchema("topic", schemaPayload)
-      expect(result).rejects.toEqual(
-        expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+      await expect(result).rejects.toBeInstanceOf(SchemaRegistryError)
+      await expect(result).rejects.toEqual(
+        expect.objectContaining({ message: mockError.message, errorCode: mockError.error_code })
       )
     })
 
@@ -42,36 +39,36 @@ describe("SchemaRegistryClient (Integration Tests)", () => {
       nock("http://test.com").post("/subjects/topic/versions").reply(200, { id: 1 })
 
       const result = schemaApi.registerSchema("topic", schemaPayload)
-      expect(result).resolves.toEqual(1)
+      await expect(result).resolves.toEqual({ id: 1 })
     })
   })
 
   describe("getSchemaById", () => {
-    it("reject if get request fails", () => {
+    it("reject if get request fails", async () => {
       const requestError = new Error("ECONNREFUSED")
       nock("http://test.com").get("/schemas/ids/1").replyWithError(requestError)
 
-      return schemaApi.getSchemaById(1).catch((error) => {
-        expect(error).toEqual(requestError)
-      })
+      const result = schemaApi.getSchemaById(1)
+      await expect(result).rejects.toBeInstanceOf(Error)
+      await expect(result).rejects.toEqual(requestError)
     })
 
-    it("reject if get request returns with not 200", () => {
+    it("reject if get request returns with not 200", async () => {
       const mockError = { error_code: 1, message: "failed request" }
       nock("http://test.com").get("/schemas/ids/1").reply(500, mockError)
 
       const result = schemaApi.getSchemaById(1)
-      expect(result).rejects.toBeInstanceOf(Error)
-      expect(result).rejects.toEqual(
-        expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+      await expect(result).rejects.toBeInstanceOf(SchemaRegistryError)
+      await expect(result).rejects.toEqual(
+        expect.objectContaining({ message: mockError.message, errorCode: mockError.error_code })
       )
     })
 
-    it("resolve with schema if get request returns with 200", () => {
+    it("resolve with schema if get request returns with 200", async () => {
       nock("http://test.com").get("/schemas/ids/1").reply(200, { id: 1, schema })
 
       const result = schemaApi.getSchemaById(1)
-      expect(result).resolves.toEqual(schema)
+      await expect(result).resolves.toEqual(schema)
     })
   })
 
@@ -109,52 +106,52 @@ describe("SchemaRegistryClient (Integration Tests)", () => {
 
   describe("getLatestVersionForSubject", () => {
     // TODO: Add testcontainers
-    it("reject if first get request fails", () => {
+    it("reject if first get request fails", async () => {
       const requestError = new Error("ECONNREFUSED")
       nock("http://test.com").get("/subjects/topic/versions").replyWithError(requestError)
 
       const result = schemaApi.getLatestVersionForSubject("topic")
-      expect(result).rejects.toEqual(requestError)
+      await expect(result).rejects.toEqual(requestError)
     })
 
-    it("reject if first get request returns with not 200", () => {
+    it("reject if first get request returns with not 200", async () => {
       const mockError = { error_code: 1, message: "failed request" }
       nock("http://test.com").get("/subjects/topic/versions").reply(500, mockError)
 
       const result = schemaApi.getLatestVersionForSubject("topic")
-      expect(result).rejects.toBeInstanceOf(Error)
-      expect(result).rejects.toEqual(
-        expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+      await expect(result).rejects.toBeInstanceOf(SchemaRegistryError)
+      await expect(result).rejects.toEqual(
+        expect.objectContaining({ message: mockError.message, errorCode: mockError.error_code })
       )
     })
 
-    it("reject if second get request fails", () => {
+    it("reject if second get request fails", async () => {
       const requestError = new Error("ECONNREFUSED")
       nock("http://test.com").get("/subjects/topic/versions").reply(200, [1, 2])
       nock("http://test.com").get("/subjects/topic/versions/2").replyWithError(requestError)
 
       const result = schemaApi.getLatestVersionForSubject("topic")
-      expect(result).rejects.toEqual(requestError)
+      await expect(result).rejects.toEqual(requestError)
     })
 
-    it("reject if second get request returns with not 200", () => {
+    it("reject if second get request returns with not 200", async () => {
       const mockError = { error_code: 1, message: "failed request" }
       nock("http://test.com").get("/subjects/topic/versions").reply(200, [1, 2])
       nock("http://test.com").get("/subjects/topic/versions/2").reply(500, mockError)
 
       const result = schemaApi.getLatestVersionForSubject("topic")
-      expect(result).rejects.toBeInstanceOf(Error)
-      expect(result).rejects.toEqual(
-        expect.objectContaining({ message: `Schema registry error: ${JSON.stringify(mockError)}` })
+      await expect(result).rejects.toBeInstanceOf(SchemaRegistryError)
+      await expect(result).rejects.toEqual(
+        expect.objectContaining({ message: mockError.message, errorCode: mockError.error_code })
       )
     })
 
-    it("resolve with schema and id if both get requests return with 200", () => {
+    it("resolve with schema and id if both get requests return with 200", async () => {
       nock("http://test.com").get("/subjects/topic/versions").reply(200, [1, 2])
       nock("http://test.com").get("/subjects/topic/versions/2").reply(200, { id: 1, schema })
 
       const result = schemaApi.getLatestVersionForSubject("topic")
-      expect(result).resolves.toEqual({ schema, id: 1 })
+      await expect(result).resolves.toEqual({ schema, id: 1 })
     })
   })
 })
@@ -221,5 +218,17 @@ xdescribe("SchemaRegistryClient (Black-Box Tests)", () => {
     expect(schema.version).toBeGreaterThan(0)
     expect(schema.subject).toEqual(subject)
     expect(schema.schema.length).toBeGreaterThan(0)
+  })
+
+  it("can check a schema", async () => {
+    const result = await client.checkSchema(subject, { schemaType: "AVRO", schema: `{"type":"string"}` })
+    // this should return the id for the existing schema
+    expect(result.id).toEqual(testSchemaId)
+  })
+
+  it("returns error for unknown schema during check", async () => {
+    const result = await client.checkSchema("unknown_subject", { schemaType: "AVRO", schema: `{"type":"string"}` })
+    // this should return the id for the existing schema
+    expect(result.id).toEqual(testSchemaId)
   })
 })

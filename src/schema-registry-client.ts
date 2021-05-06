@@ -2,9 +2,10 @@ import * as httpsRequest from "https"
 import * as httpRequest from "http"
 import { URL } from "url"
 
-interface SchemaRegistryError {
-  error_code: number
-  message: string
+export class SchemaRegistryError extends Error {
+  constructor(readonly errorCode: number, readonly message: string) {
+    super(`Schema registry error: code: ${errorCode} - ${message}`)
+  }
 }
 
 export interface SchemaApiClientConfiguration {
@@ -221,7 +222,7 @@ export class SchemaRegistryClient {
   ): Promise<{ subject: string; id: number; version: number; schema: string }> {
     const path = `${this.basePath}subjects/${subject}`
 
-    const body = JSON.stringify({ schema: JSON.stringify(schema) })
+    const body = JSON.stringify(schema)
     const requestOptions: RequestOptions = {
       ...this.baseRequestOptions,
       method: "POST",
@@ -257,8 +258,8 @@ export class SchemaRegistryClient {
           })
           res.on("end", () => {
             if (res.statusCode !== 200) {
-              const error: SchemaRegistryError = JSON.parse(data)
-              return reject(new Error(`Schema registry error: ${data}`))
+              const { error_code, message } = JSON.parse(data)
+              return reject(new SchemaRegistryError(error_code, message))
             } else {
               return resolve(data)
             }
