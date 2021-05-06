@@ -1,3 +1,7 @@
+# TODO Rewrite documentation
+
+everything below is outdated
+
 # avro-schema-registry
 
 Confluent Schema Registry implementation to easily serialize and deserialize kafka messages with only one peer depencency.
@@ -40,17 +44,18 @@ npm install avro-schema-registry
 
 The module exports one function only, which expects a `url` parameter, which is a Confluent Schema Registry endpoint and an optional auth object. The function returns an object .
 
-Every method returns a Promise.
-Every method uses an internal cache to store already retrieved schemas and if the same id or schema is used again it won't perform another network call. Schemas are cached with their parsing options.
+Every method returns a Promise. Every method uses an internal cache to store already retrieved schemas and if the same id or schema is used again it won't perform another network call. Schemas are cached with their parsing options.
 
 ## Authentication with the Schema Registry
 
 You can set username and password in the url object:
+
 ```
 require('avro-schema-registry')('https://username:password@host.com:8081');
 ```
 
 You can pass in an optional second parameter for the registry, with the username and password:
+
 ```
 require('avro-schema-registry')('https://host.com:8081', {username: 'username', password: 'password'});
 ```
@@ -58,17 +63,22 @@ require('avro-schema-registry')('https://host.com:8081', {username: 'username', 
 If both the url contains the authencation information and there's an authentication object parameter then the object takes precedence.
 
 ## decode
+
 Parameters:
+
 - msg: object to decode
 - parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
 
 Decodes an avro encoded buffer into a javascript object.
 
 ## decodeMessage
+
 Same as **decode**, only exists for backward compatibility reason.
 
 ## encodeKey
+
 Parameters:
+
 - topic: the topic to register the schema, if it doesn't exist already in the registry. The schema will be put under the subject `${topic}-key`
 - schema: object representing an avro schema
 - msg: message object to be encoded
@@ -77,7 +87,9 @@ Parameters:
 Encodes an object into an avro encoded buffer.
 
 ## encodeMessage
+
 Parameters:
+
 - topic: the topic to register the schema, if it doesn't exist already in the registry. The schema will be put under the subject `${topic}-value`
 - schema: object representing an avro schema
 - msg: message object to be encoded
@@ -86,7 +98,9 @@ Parameters:
 Encodes a message object into an avro encoded buffer.
 
 ## encodeById
+
 Parameters:
+
 - id: schema id in the registry
 - msg: message object to be encoded
 - parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
