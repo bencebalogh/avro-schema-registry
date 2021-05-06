@@ -1,6 +1,11 @@
 import * as nock from "nock"
 
-import { SchemaApiClientConfiguration, SchemaRegistryClient, SchemaRegistryError } from "./schema-registry-client"
+import {
+  SchemaApiClientConfiguration,
+  SchemaRegistryClient,
+  SchemaRegistryError,
+  SchemaType,
+} from "./schema-registry-client"
 
 describe("SchemaRegistryClient (Integration Tests)", () => {
   const schema = { type: "string" }
@@ -29,10 +34,7 @@ describe("SchemaRegistryClient (Integration Tests)", () => {
       nock("http://test.com").post("/subjects/topic/versions").reply(500, mockError)
 
       const result = schemaApi.registerSchema("topic", schemaPayload)
-      await expect(result).rejects.toBeInstanceOf(SchemaRegistryError)
-      await expect(result).rejects.toEqual(
-        expect.objectContaining({ message: mockError.message, errorCode: mockError.error_code })
-      )
+      await expect(result).rejects.toThrowError(new SchemaRegistryError(mockError.error_code, mockError.message))
     })
 
     it("resolve with schema id if post request returns with 200", async () => {
@@ -58,17 +60,15 @@ describe("SchemaRegistryClient (Integration Tests)", () => {
       nock("http://test.com").get("/schemas/ids/1").reply(500, mockError)
 
       const result = schemaApi.getSchemaById(1)
-      await expect(result).rejects.toBeInstanceOf(SchemaRegistryError)
-      await expect(result).rejects.toEqual(
-        expect.objectContaining({ message: mockError.message, errorCode: mockError.error_code })
-      )
+      await expect(result).rejects.toThrowError(new SchemaRegistryError(mockError.error_code, mockError.message))
     })
 
     it("resolve with schema if get request returns with 200", async () => {
-      nock("http://test.com").get("/schemas/ids/1").reply(200, { id: 1, schema })
+      const mockPayload = { id: 1, schema }
+      nock("http://test.com").get("/schemas/ids/1").reply(200, mockPayload)
 
       const result = schemaApi.getSchemaById(1)
-      await expect(result).resolves.toEqual(schema)
+      await expect(result).resolves.toEqual(mockPayload)
     })
   })
 
@@ -105,10 +105,9 @@ describe("SchemaRegistryClient (Integration Tests)", () => {
   })
 
   describe("getLatestVersionForSubject", () => {
-    // TODO: Add testcontainers
     it("reject if first get request fails", async () => {
       const requestError = new Error("ECONNREFUSED")
-      nock("http://test.com").get("/subjects/topic/versions").replyWithError(requestError)
+      nock("http://test.com").get("/subjects/topic/versions/latest").replyWithError(requestError)
 
       const result = schemaApi.getLatestVersionForSubject("topic")
       await expect(result).rejects.toEqual(requestError)
@@ -116,119 +115,17 @@ describe("SchemaRegistryClient (Integration Tests)", () => {
 
     it("reject if first get request returns with not 200", async () => {
       const mockError = { error_code: 1, message: "failed request" }
-      nock("http://test.com").get("/subjects/topic/versions").reply(500, mockError)
+      nock("http://test.com").get("/subjects/topic/versions/latest").reply(500, mockError)
 
       const result = schemaApi.getLatestVersionForSubject("topic")
-      await expect(result).rejects.toBeInstanceOf(SchemaRegistryError)
-      await expect(result).rejects.toEqual(
-        expect.objectContaining({ message: mockError.message, errorCode: mockError.error_code })
-      )
-    })
-
-    it("reject if second get request fails", async () => {
-      const requestError = new Error("ECONNREFUSED")
-      nock("http://test.com").get("/subjects/topic/versions").reply(200, [1, 2])
-      nock("http://test.com").get("/subjects/topic/versions/2").replyWithError(requestError)
-
-      const result = schemaApi.getLatestVersionForSubject("topic")
-      await expect(result).rejects.toEqual(requestError)
-    })
-
-    it("reject if second get request returns with not 200", async () => {
-      const mockError = { error_code: 1, message: "failed request" }
-      nock("http://test.com").get("/subjects/topic/versions").reply(200, [1, 2])
-      nock("http://test.com").get("/subjects/topic/versions/2").reply(500, mockError)
-
-      const result = schemaApi.getLatestVersionForSubject("topic")
-      await expect(result).rejects.toBeInstanceOf(SchemaRegistryError)
-      await expect(result).rejects.toEqual(
-        expect.objectContaining({ message: mockError.message, errorCode: mockError.error_code })
-      )
+      await expect(result).rejects.toThrowError(new SchemaRegistryError(mockError.error_code, mockError.message))
     })
 
     it("resolve with schema and id if both get requests return with 200", async () => {
-      nock("http://test.com").get("/subjects/topic/versions").reply(200, [1, 2])
-      nock("http://test.com").get("/subjects/topic/versions/2").reply(200, { id: 1, schema })
+      nock("http://test.com").get("/subjects/topic/versions/latest").reply(200, { id: 1, schema })
 
       const result = schemaApi.getLatestVersionForSubject("topic")
       await expect(result).resolves.toEqual({ schema, id: 1 })
     })
-  })
-})
-
-xdescribe("SchemaRegistryClient (Black-Box Tests)", () => {
-  const client = new SchemaRegistryClient({
-    baseUrl: "http://localhost:8081",
-  })
-  const subject = "TEST_TOPIC-value"
-  let testSchemaId: number
-
-  beforeEach(async () => {
-    const result = await client.registerSchema(subject, { schemaType: "AVRO", schema: `{"type":"string"}` })
-    testSchemaId = result.id
-    expect(testSchemaId).toBeGreaterThan(0)
-  })
-
-  afterEach(async () => {
-    // soft delete
-    const softDeletedIds = await client.deleteSubject(subject)
-
-    // perma delete
-    const permanentDeletedIds = await client.deleteSubject(subject, true)
-    expect(softDeletedIds).toEqual(permanentDeletedIds)
-  })
-
-  it("should get schema type", async () => {
-    const result = await client.getSchemaTypes()
-    expect(result).toEqual(["JSON", "PROTOBUF", "AVRO"])
-  })
-
-  it("schema by id", async () => {
-    const schema = await client.getSchemaById(testSchemaId)
-    expect(schema.length).toBeGreaterThan(0)
-  })
-
-  it("list subjects", async () => {
-    const availableSubjects = await client.listSubjects()
-    expect(availableSubjects).toEqual([subject])
-  })
-
-  it("versions by id", async () => {
-    const versions = await client.listVersionsForId(testSchemaId)
-    expect(versions).toHaveLength(1)
-  })
-
-  it("versions by subject & get schema for subject and version", async () => {
-    const versions = await client.listVersionsForSubject(subject)
-    expect(versions).toHaveLength(1)
-
-    const schema = await client.getSchemaForSubjectAndVersion(subject, versions[0])
-    expect(schema.id).toEqual(testSchemaId)
-    expect(schema.version).toEqual(versions[0])
-    expect(schema.subject).toEqual(subject)
-    expect(schema.schema.length).toBeGreaterThan(0)
-
-    const rawSchema = await client.getRawSchemaForSubjectAndVersion(subject, versions[0])
-    expect(rawSchema).toEqual(schema.schema)
-  })
-
-  it("should get the latest schema version for a subject", async () => {
-    const schema = await client.getLatestVersionForSubject(subject)
-    expect(schema.id).toEqual(testSchemaId)
-    expect(schema.version).toBeGreaterThan(0)
-    expect(schema.subject).toEqual(subject)
-    expect(schema.schema.length).toBeGreaterThan(0)
-  })
-
-  it("can check a schema", async () => {
-    const result = await client.checkSchema(subject, { schemaType: "AVRO", schema: `{"type":"string"}` })
-    // this should return the id for the existing schema
-    expect(result.id).toEqual(testSchemaId)
-  })
-
-  it("returns error for unknown schema during check", async () => {
-    const result = await client.checkSchema("unknown_subject", { schemaType: "AVRO", schema: `{"type":"string"}` })
-    // this should return the id for the existing schema
-    expect(result.id).toEqual(testSchemaId)
   })
 })

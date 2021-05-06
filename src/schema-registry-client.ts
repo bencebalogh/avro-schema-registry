@@ -2,9 +2,19 @@ import * as httpsRequest from "https"
 import * as httpRequest from "http"
 import { URL } from "url"
 
+export enum SchemaType {
+  AVRO = "AVRO", // (default)
+  PROTOBUF = "PROTOBUF",
+  JSON = "JSON",
+}
 export class SchemaRegistryError extends Error {
-  constructor(readonly errorCode: number, readonly message: string) {
-    super(`Schema registry error: code: ${errorCode} - ${message}`)
+  errorCode: number
+
+  constructor(errorCode: number, message: string) {
+    super()
+
+    this.message = `Schema registry error: code: ${errorCode} - ${message}`
+    this.errorCode = errorCode
   }
 }
 
@@ -16,6 +26,14 @@ export interface SchemaApiClientConfiguration {
 }
 
 type RequestOptions = httpsRequest.RequestOptions | httpRequest.RequestOptions
+
+interface SchemaDefinition {
+  subject: string
+  id: number
+  version: number
+  schema: string
+  schemaType?: SchemaType
+}
 
 export class SchemaRegistryClient {
   baseRequestOptions: RequestOptions
@@ -49,7 +67,7 @@ export class SchemaRegistryClient {
    * @param schemaId
    * @returns
    */
-  async getSchemaById(schemaId: number): Promise<string> {
+  async getSchemaById(schemaId: number): Promise<{ schema: string; schemaType: SchemaType }> {
     const path = `${this.basePath}schemas/ids/${schemaId}`
 
     const requestOptions: RequestOptions = {
@@ -57,7 +75,7 @@ export class SchemaRegistryClient {
       path,
     }
 
-    return JSON.parse(await this.request(requestOptions)).schema
+    return JSON.parse(await this.request(requestOptions))
   }
 
   /**
@@ -141,15 +159,12 @@ export class SchemaRegistryClient {
   /**
    * Get schema for subject and version
    * @param subject
-   * @param version
+   * @param version optional version to retrieve (if not provided the latest version will be fetched)
    * @returns
    */
-  async getSchemaForSubjectAndVersion(
-    subject: string,
-    version: number
-  ): Promise<{ subject: string; id: number; version: number; schema: string }> {
+  async getSchemaForSubjectAndVersion(subject: string, version?: number): Promise<SchemaDefinition> {
     // TODO: There is also GET /subjects/(string: subject)/versions/(versionId: version)/schema which would return only the schema as response
-    const path = `${this.basePath}subjects/${subject}/versions/${version}`
+    const path = `${this.basePath}subjects/${subject}/versions/${version ?? "latest"}`
 
     const schemaInfoRequestOptions: RequestOptions = {
       ...this.baseRequestOptions,
@@ -160,13 +175,12 @@ export class SchemaRegistryClient {
   }
 
   /**
-   * Get the latest schema version for a subject
+   * Alias for getSchemaForSubjectAndVersion with version = latest
    * @param subject
    * @returns
    */
   async getLatestVersionForSubject(subject: string): ReturnType<SchemaRegistryClient["getSchemaForSubjectAndVersion"]> {
-    const schemaVersionList = await this.listVersionsForSubject(subject)
-    return await this.getSchemaForSubjectAndVersion(subject, schemaVersionList.pop())
+    return await this.getSchemaForSubjectAndVersion(subject)
   }
 
   /**
@@ -195,7 +209,7 @@ export class SchemaRegistryClient {
   async registerSchema(
     subject: string,
     schema: { schema: string; schemaType: string; references?: any }
-  ): Promise<{ subject: string; id: number; version: number; schema: string }> {
+  ): Promise<SchemaDefinition> {
     const path = `${this.basePath}subjects/${subject}/versions`
 
     const body = JSON.stringify(schema)
@@ -219,7 +233,7 @@ export class SchemaRegistryClient {
   async checkSchema(
     subject: string,
     schema: { schema: string; schemaType: string; references?: any }
-  ): Promise<{ subject: string; id: number; version: number; schema: string }> {
+  ): Promise<SchemaDefinition> {
     const path = `${this.basePath}subjects/${subject}`
 
     const body = JSON.stringify(schema)
@@ -230,7 +244,22 @@ export class SchemaRegistryClient {
       path,
     }
 
-    return JSON.parse(await this.request(requestOptions, body))
+    try {
+      return JSON.parse(await this.request(requestOptions, body))
+    } catch (e) {
+      if (e instanceof SchemaRegistryError) {
+        switch (e.errorCode) {
+          case 404:
+          case 40401:
+          case 40403:
+            // squash different 404 errors
+            throw new SchemaRegistryError(404, e.message)
+          default:
+        }
+      }
+
+      throw e
+    }
   }
 
   // TODO: DELETE /subjects/(string: subject)/versions/(versionId: version)

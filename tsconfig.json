@@ -1,9 +1,9 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "rootDir": ".",
+    "rootDir": "./src",
     "sourceMap": true,
-    "declaration": false,
+    "declaration": true,
     "moduleResolution": "node",
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
@@ -14,9 +14,8 @@
     "lib": ["es2017"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "baseUrl": ".",
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["/**/*.ts"],
   "exclude": ["node_modules", "**/*.spec.ts"]
 }
