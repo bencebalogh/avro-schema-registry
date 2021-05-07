@@ -1,21 +1,89 @@
 import { SchemaRegistryClient, SchemaRegistryError, SchemaType } from "./schema-registry-client"
+import { GenericContainer, Network, StartedNetwork, StartedTestContainer } from "testcontainers"
 
-// TODO: Add testcontainers
+let zookeeperContainer: StartedTestContainer
+let kafkaContainer: StartedTestContainer
+let schemaRegistryContainer: StartedTestContainer
+let network: StartedNetwork
+let registryPort: number
+
+beforeAll(async () => {
+  const TAG = "5.5.4"
+
+  // increase timeout to 10 minutes (docker compose from scratch will probably take longer)
+  try {
+    jest.setTimeout(1000 * 60 * 60 * 10)
+    network = await new Network().start()
+
+    const ZOOKEEPER_CLIENT_PORT = 2181
+    zookeeperContainer = await new GenericContainer(`confluentinc/cp-zookeeper:${TAG}`)
+      .withName("zookeeper")
+      .withEnv("ZOOKEEPER_CLIENT_PORT", `${ZOOKEEPER_CLIENT_PORT}`)
+      .withNetworkMode(network.getName())
+      .start()
+
+    const zookeeperHost = `zookeeper:${ZOOKEEPER_CLIENT_PORT}`
+    kafkaContainer = await new GenericContainer(`confluentinc/cp-kafka:${TAG}`)
+      .withName("kafka")
+      .withNetworkMode(network.getName())
+      .withEnv("KAFKA_ZOOKEEPER_CONNECT", zookeeperHost)
+      .withEnv("KAFKA_LISTENER_SECURITY_PROTOCOL_MAP", "PLAINTEXT:PLAINTEXT")
+      .withEnv("KAFKA_ADVERTISED_LISTENERS", "PLAINTEXT://:9092")
+      .withEnv("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR", "1")
+      .withEnv("KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS", "0")
+      .withEnv("KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR", "1")
+      .withExposedPorts(9092)
+      .start()
+
+    schemaRegistryContainer = await new GenericContainer(`confluentinc/cp-schema-registry:${TAG}`)
+      .withNetworkMode(network.getName())
+      .withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
+      .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", `kafka:9092`)
+      // .withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:8081")
+      .withExposedPorts(8081)
+      .start()
+
+    registryPort = schemaRegistryContainer.getMappedPort(8081)
+    jest.setTimeout(15000)
+  } catch (e) {
+    if (zookeeperContainer) await zookeeperContainer.stop()
+    if (kafkaContainer) await kafkaContainer.stop()
+    if (schemaRegistryContainer) await schemaRegistryContainer.stop()
+    if (network) await network.stop()
+
+    throw e
+  }
+})
+
+afterAll(async () => {
+  jest.setTimeout(1000 * 60 * 60 * 10)
+  if (zookeeperContainer) await zookeeperContainer.stop()
+  if (kafkaContainer) await kafkaContainer.stop()
+  if (schemaRegistryContainer) await schemaRegistryContainer.stop()
+  if (network) await network.stop()
+})
 
 describe("SchemaRegistryClient AVRO (Black-Box Tests)", () => {
-  const client = new SchemaRegistryClient({
-    baseUrl: "http://localhost:8081",
-  })
+  // registryPort = 8081
+  let client: SchemaRegistryClient
   const subject = "TEST_TOPIC-value"
   let testSchemaId: number
 
-  beforeEach(async () => {
-    const result = await client.registerSchema(subject, { schemaType: "AVRO", schema: `{"type":"string"}` })
+  beforeAll(async () => {
+    client = new SchemaRegistryClient({
+      baseUrl: `http://localhost:${registryPort}`,
+    })
+
+    debugger
+
+    const result = await client.registerSchema(subject, { schemaType: SchemaType.AVRO, schema: `{"type":"string"}` })
     testSchemaId = result.id
     expect(testSchemaId).toBeGreaterThan(0)
   })
 
-  afterEach(async () => {
+  afterAll(async () => {
+    debugger
+
     // soft delete
     const softDeletedIds = await client.deleteSubject(subject)
 
@@ -77,14 +145,12 @@ describe("SchemaRegistryClient AVRO (Black-Box Tests)", () => {
       schemaType: SchemaType.AVRO,
       schema: `{"type":"string"}`,
     })
-    expect(result).toBeUndefined()
+    await expect(result).rejects.toThrowError(new SchemaRegistryError(40403, "Subject 'unknown_subject' not found"))
   })
 })
 
 describe("SchemaRegistryClient PROTOBUF (Black-Box Tests)", () => {
-  const client = new SchemaRegistryClient({
-    baseUrl: "http://localhost:8081",
-  })
+  let client: SchemaRegistryClient
   const subject = "TEST_PROTOBUF_TOPIC-value"
   let testSchemaId: number
   const testSchema = `syntax = "proto3";
@@ -95,7 +161,11 @@ describe("SchemaRegistryClient PROTOBUF (Black-Box Tests)", () => {
     string f1 = 1;
   }`
 
-  beforeEach(async () => {
+  beforeAll(async () => {
+    client = new SchemaRegistryClient({
+      baseUrl: `http://localhost:${registryPort}`,
+    })
+
     const result = await client.registerSchema(subject, {
       schemaType: SchemaType.PROTOBUF,
       schema: testSchema,
@@ -104,7 +174,7 @@ describe("SchemaRegistryClient PROTOBUF (Black-Box Tests)", () => {
     expect(testSchemaId).toBeGreaterThan(0)
   })
 
-  afterEach(async () => {
+  afterAll(async () => {
     // soft delete
     const softDeletedIds = await client.deleteSubject(subject)
 
