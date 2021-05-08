@@ -1,4 +1,4 @@
-# kafka-schema-encode-decode
+# schematic-kafka
 
 This work is based on [avro-schema-registry](https://github.com/bencebalogh/avro-schema-registry).
 
@@ -11,15 +11,15 @@ This lib is **schema type agnostic**. It works fine with whatever protocol you m
 ### Install
 
 ```
-npm install avsc this-lib
+npm install avsc schematic-kafka
 # or
-yarn add avsc this-lib
+yarn add avsc schematic-kafka
 ```
 
 ### Use
 
 ```
-import { KafkaRegistryHelper, SchemaType } from "this-lib"
+import { KafkaRegistryHelper, SchemaType } from "schematic-kafka"
 import { parse, Type as AVSCInstance } from "avsc"
 
 // create instance

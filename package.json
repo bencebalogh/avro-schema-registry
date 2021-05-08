@@ -1,5 +1,5 @@
 {
-  "name": "kafka-schema-encode-decode",
+  "name": "schematic-kafka",
   "version": "1.0.0",
   "description": "Encode and decode kafka messages with Confluent Schema Registry (pure typescript implementation)",
   "main": "dist/index.js",
