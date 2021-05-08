@@ -1,7 +1,7 @@
 {
-  "name": "avro-schema-registry",
-  "version": "2.1.3",
-  "description": "Confluent Schema Registry implementation in javascript to easily serialize and deserialize kafka messages",
+  "name": "kafka-schema-encode-decode",
+  "version": "1.0.0",
+  "description": "Encode and decode kafka messages with Confluent Schema Registry (pure typescript implementation)",
   "main": "dist/index.js",
   "scripts": {
     "test": "node_modules/.bin/jest",
@@ -12,17 +12,17 @@
   "keywords": [
     "kafka",
     "schema",
-    "schema-registry"
+    "schema-registry",
+    "typescript",
+    "avro",
+    "protobuf",
+    "json"
   ],
   "author": "Johann Wagner <github@konqi.de>",
   "license": "MIT",
-  "peerDependencies": {
-    "avsc": "^5.7.0",
-    "protobufjs": "^6.11.0"
-  },
   "repository": {
     "type": "git",
-    "url": "git://github.com/bencebalogh/avro-schema-registry.git"
+    "url": "git://github.com/konqi/avro-schema-registry.git"
   },
   "devDependencies": {
     "@types/jest": "^26.0.23",

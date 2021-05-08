@@ -1,43 +1,98 @@
-# TODO Rewrite documentation
+# kafka-schema-encode-decode
 
-everything below is outdated
+This work is based on [avro-schema-registry](https://github.com/bencebalogh/avro-schema-registry).
 
-# avro-schema-registry
+There are a couple of differences, the obvious being a pure typescript implementation.
 
-Confluent Schema Registry implementation to easily serialize and deserialize kafka messages with only one peer depencency.
+This lib is **schema type agnostic**. It works fine with whatever protocol you may want to use, but it doesn't take care of this aspect.
 
-# Quickstart
+## Quickstart
+
+### Install
 
 ```
-const registry = require('avro-schema-registry')('https://host.com:8081');
+npm install avsc this-lib
+# or
+yarn add avsc this-lib
+```
 
-const schema = {type: 'string'};
-const message = 'test message';
+### Use
 
-registry.encodeMessage('topic', schema, message)
-  .then((msg) => {
-    console.log(msg);   // <Buffer 00 00 00 00 01 18 74 65 73 74 20 6d 65 73 73 61 67 65>
+```
+import { KafkaRegistryHelper, SchemaType } from "this-lib"
+import { parse, Type as AVSCInstance } from "avsc"
 
-    return registry.decode(msg);
+// create instance
+const registry = new KafkaRegistryHelper({ baseUrl: "https://schemaRegistryHost:8081" })
+  .withSchemaHandler(SchemaType.AVRO, (schema: string) => {
+    // if you want to customize your encoder, this is where you'd do it
+    const avsc: AVSCInstance = parse(schema)
+    return {
+      encode: (message: any) => {
+        return avsc.toBuffer(message)
+      },
+      decode: (message: Buffer) => {
+        return avsc.fromBuffer(message)
+      },
+    }
   })
-  .then((msg) => {
-    console.log(msg);  // test message
-  });
 
-registry.encodeById(1, message)
-  .then((msg) => {
-    console.log(msg);   // <Buffer 00 00 00 00 01 18 74 65 73 74 20 6d 65 73 73 61 67 65>
+// how to decode a message from kafka
+// AVSC return parsed json, so decodedMessage this is an already object, ready to use
+const decodedMessage = await registry.decode(rawMessageFromKafka)
 
-    return registry.decode(msg);
-  })
-
+// how to encode a message with a schema
+// where
+// - subject    is the kafka topic plus the (-key, -value) postfix
+// - message    the actual message to send (this has to be in whatever format
+//              the schema handler defined above expects in the encode-function)
+// - schemaType (optional) AVRO/PROTOBUF/JSON
+// - schema     (optional) serialized schema to be used
+// returns      a Buffer that you can send to the kafka broker
+const encodeResult = await registry.encodeForSubject(subject, message, SchemaType.AVRO, schema)
 ```
 
-# Install
+For more examples, take a look at `src/kafka-registry-helper.testcontainer.spec.ts`.
+
+## How this library works
+
+This is how a kafka message looks like when you send or receive it.
 
 ```
-npm install avsc // if not already installed
-npm install avro-schema-registry
+[ 1 byte  | 0      | 0 indicates this message is schema encoded ]
+[ 4 bytes | number | schema id                                  ]
+[ n bytes | msg    | protocol encoded message                   ]
+```
+
+The first byte being a zero tells us that the following four bytes contain the schema id. With this schema id we can request the schema type (AVRO, PROTOBUF or JSON) and schema (serialized representation of the schema for the respective schema type) from the schema registry.
+
+This library can decodes whole kafka message header and then calls the appropriate decoder that you provide with the schema as argument.
+
+## Documentation
+
+### Client SSL authentication
+
+This library uses node's http/https request. As such you can provide an Agent to modify your requests.
+
+```
+import { Agent } from "https"
+
+const agent = new Agent({
+  key: readFileSync("./client.key"),
+  cert: readFileSync("./client.cert"),
+})
+new KafkaRegistryHelper({ baseUrl: "https://schemaRegistryHost:8081", agent })
+...
+```
+
+### Basic authentication
+
+```
+new KafkaRegistryHelper({ baseUrl: "https://schemaRegistryHost:8081", username: "username", password: "password })
+
+// OR
+
+new KafkaRegistryHelper({ baseUrl: "https://username:password@schemaRegistryHost:8081" })
 ```
 
 # Doc
@@ -62,72 +117,10 @@ require('avro-schema-registry')('https://host.com:8081', {username: 'username', 
 
 If both the url contains the authencation information and there's an authentication object parameter then the object takes precedence.
 
-## decode
+## feature x
 
-Parameters:
+TODO - document things hint: Most methods have jsdoc comments on them. Have a look.
 
-- msg: object to decode
-- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
+# Dependencies
 
-Decodes an avro encoded buffer into a javascript object.
-
-## decodeMessage
-
-Same as **decode**, only exists for backward compatibility reason.
-
-## encodeKey
-
-Parameters:
-
-- topic: the topic to register the schema, if it doesn't exist already in the registry. The schema will be put under the subject `${topic}-key`
-- schema: object representing an avro schema
-- msg: message object to be encoded
-- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
-
-Encodes an object into an avro encoded buffer.
-
-## encodeMessage
-
-Parameters:
-
-- topic: the topic to register the schema, if it doesn't exist already in the registry. The schema will be put under the subject `${topic}-value`
-- schema: object representing an avro schema
-- msg: message object to be encoded
-- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
-
-Encodes a message object into an avro encoded buffer.
-
-## encodeById
-
-Parameters:
-
-- id: schema id in the registry
-- msg: message object to be encoded
-- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
-
-Encodes a message object into an avro encoded buffer by fetching the schema from the registry.
-
-## encodeMessageByTopicName
-
-Try to get already existing schema from the schema registry and encode message with obtained schema. Please note, that the latest schema will be obtained.
-
-This may be useful when topic consumer is on duty of providing the schema for the topic's messages.
-
-Parameters:
-
-- topic: topic name to fetch schema for
-- msg: message object to be encoded
-- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
-
-## getSchemaByTopicName
-
-This method tries to get already existing schema from the schema registry. Please note, that the latest schema will be obtained.
-
-Parameters:
-
-- topic: topic name to fetch schema for
-- parseOptions: parsiong options to pass to `avsc.parse`, default: `null`
-
-# Peer dependency
-
-The module has no dependency, only one peer dependency: [avsc](https://github.com/mtth/avsc)
+The module has just the tslib as dependency.
