@@ -39,7 +39,6 @@ beforeAll(async () => {
       .withNetworkMode(network.getName())
       .withEnv("SCHEMA_REGISTRY_HOST_NAME", "schema-registry")
       .withEnv("SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS", `kafka:9092`)
-      // .withEnv("SCHEMA_REGISTRY_LISTENERS", "http://0.0.0.0:8081")
       .withExposedPorts(8081)
       .start()
 
@@ -74,16 +73,12 @@ describe("SchemaRegistryClient AVRO (Black-Box Tests)", () => {
       baseUrl: `http://localhost:${registryPort}`,
     })
 
-    debugger
-
     const result = await client.registerSchema(subject, { schemaType: SchemaType.AVRO, schema: `{"type":"string"}` })
     testSchemaId = result.id
     expect(testSchemaId).toBeGreaterThan(0)
   })
 
   afterAll(async () => {
-    debugger
-
     // soft delete
     const softDeletedIds = await client.deleteSubject(subject)
 

@@ -27,7 +27,7 @@ export interface SchemaApiClientConfiguration {
 
 type RequestOptions = httpsRequest.RequestOptions | httpRequest.RequestOptions
 
-interface SchemaDefinition {
+export interface SchemaDefinition {
   subject: string
   id: number
   version: number
@@ -44,7 +44,7 @@ export class SchemaRegistryClient {
     const parsed = new URL(options.baseUrl)
 
     this.requester = parsed.protocol.startsWith("https") ? httpsRequest : httpRequest
-    this.basePath = parsed.pathname != null ? parsed.pathname : "/"
+    this.basePath = parsed.pathname !== null ? parsed.pathname : "/"
 
     const username = options.username ?? parsed.username
     const password = options.password ?? parsed.password
@@ -286,11 +286,14 @@ export class SchemaRegistryClient {
             reject(e)
           })
           res.on("end", () => {
-            if (res.statusCode !== 200) {
+            if (res.statusCode === 200) {
+              return resolve(data)
+            }
+            if (data.length > 0) {
               const { error_code, message } = JSON.parse(data)
               return reject(new SchemaRegistryError(error_code, message))
             } else {
-              return resolve(data)
+              return reject(new Error("Invalid schema registry response"))
             }
           })
         })
