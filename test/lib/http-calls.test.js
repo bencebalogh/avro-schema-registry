@@ -20,6 +20,15 @@ describe('http-calls', () => {
     nock.cleanAll();
   });
 
+  const nonStandardErrorPayload = `
+  <html>
+  <head><title>401 Authorization Required</title></head>
+  <body>
+  <center><h1>401 Authorization Required</h1></center>
+  <hr><center>nginx</center>
+  </body>
+  </html>`
+
   describe('pushSchema', () => {
     it('reject if post request fails', () => {
       const requestError = new Error("ECONNREFUSED");
@@ -51,6 +60,18 @@ describe('http-calls', () => {
 
       return pushSchema(registry, 'topic', schema).then((id) => {
         expect(id).to.equal(1);
+      });
+    });
+
+    it('reject if post request returns with with 401 and without registry error object', () => {
+      nock('http://test.com')
+        .post('/subjects/topic/versions')
+        .reply(401, nonStandardErrorPayload);
+
+      return pushSchema(registry, 'topic', schema).catch((error) => {
+        expect(error).to.exist
+          .and.be.instanceof(Error)
+          .and.have.property('message', `Schema registry error: no error in response; httpStatus is 401`);
       });
     });
   });
@@ -86,6 +107,18 @@ describe('http-calls', () => {
 
       return getSchemaById(registry, 1).then((returnedSchema) => {
         expect(returnedSchema).to.eql(schema);
+      });
+    });
+
+    it('reject if post request returns with with 401 and without registry error object', () => {
+      nock('http://test.com')
+        .get('/schemas/ids/1')
+        .reply(401, nonStandardErrorPayload);
+
+      return getSchemaById(registry, 1).catch((error) => {
+        expect(error).to.exist
+          .and.be.instanceof(Error)
+          .and.have.property('message', `Schema registry error: no error in response; httpStatus is 401`);
       });
     });
   });
@@ -157,6 +190,33 @@ describe('http-calls', () => {
       return getLatestVersionForSubject(registry, 'topic').then(({schema: returnedSchema, id}) => {
         expect(schema).to.eql(returnedSchema);
         expect(id).to.equal(1);
+      });
+    });
+
+    it('reject if first get request returns with 401 and without registry error object', () => {
+      nock('http://test.com')
+        .get('/subjects/topic/versions')
+        .reply(401, nonStandardErrorPayload);
+
+      return getLatestVersionForSubject(registry, 'topic').catch((error) => {
+        expect(error).to.exist
+          .and.be.instanceof(Error)
+          .and.have.property('message', `Schema registry error: no error in response; httpStatus is 401`);
+      });
+    });
+
+    it('reject if second get request returns with 401 and without registry error object', () => {
+      nock('http://test.com')
+        .get('/subjects/topic/versions')
+        .reply(200, [1,2]);
+      nock('http://test.com')
+        .get('/subjects/topic/versions/2')
+        .reply(500, {error_code: 1, message: "failed request"});
+
+      return getLatestVersionForSubject(registry, 'topic').catch((error) => {
+        expect(error).to.exist
+          .and.be.instanceof(Error)
+          .and.have.property('message', `Schema registry error: no error in response; httpStatus is 401`);
       });
     });
   });
